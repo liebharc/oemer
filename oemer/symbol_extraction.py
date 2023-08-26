@@ -245,7 +245,7 @@ def filter_clef_box(bboxes: List[Tuple[int, int, int, int]]) -> List[Tuple[int, 
     return valid_box
 
 
-def parse_clefs_keys(clefs_keys: ndarray, unit_size: float64, clef_size_ratio: float = 3.5, max_clef_tp_ratio: float = 0.45) -> Tuple[List[Tuple[int, int, int, int]], List[Tuple[int, int, int, int]], List[str], List[str]]:
+def parse_clefs_keys(clefs_keys: ndarray, unit_size: float64, clef_size_ratio: float = 5, max_clef_tp_ratio: float = 0.45) -> Tuple[List[Tuple[int, int, int, int]], List[Tuple[int, int, int, int]], List[str], List[str]]:
     global cs_img
     cs_img = to_rgb_img(clefs_keys) # type: ignore
 
@@ -268,6 +268,7 @@ def parse_clefs_keys(clefs_keys: ndarray, unit_size: float64, clef_size_ratio: f
         area_tp_ratio = region[region>0].size / (w * h)
         #cv2.rectangle(cs_img, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 1)
         #cv2.putText(cs_img, f"{area_tp_ratio:.2f} / {area_size_ratio:.2f}", (box[2]+2, box[3]), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 1)
+        #cv2.imwrite("cs_img.png", cs_img)
         if area_size_ratio > clef_size_ratio \
                 and area_tp_ratio < max_clef_tp_ratio:
             clef_box.append(box)
