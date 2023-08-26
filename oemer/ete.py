@@ -25,7 +25,7 @@ from oemer.note_group_extraction import extract as group_extract
 from oemer.symbol_extraction import extract as symbol_extract
 from oemer.rhythm_extraction import extract as rhythm_extract
 from oemer.build_system import MusicXMLBuilder
-from oemer.draw_teaser import teaser
+from oemer.draw_teaser import draw_notes, draw_before_rhythm, draw_staff_and_zones, teaser
 
 
 logger = get_logger(__name__)
@@ -185,6 +185,7 @@ def extract(args: Namespace) -> str:
     staffs, zones = staff_extract()
     layers.register_layer("staffs", staffs)  # Array of 'Staff' instances
     layers.register_layer("zones", zones)  # Range of each zones, array of 'range' object.
+    debug_show(f_name, 2.0, 'staffs', draw_staff_and_zones())
 
     # ---- Extract noteheads ---- #
     logger.info("Extracting noteheads")
@@ -192,6 +193,7 @@ def extract(args: Namespace) -> str:
 
     # Array of 'NoteHead' instances.
     layers.register_layer('notes', np.array(notes))
+    debug_show(f_name, 2.0, 'notes', draw_notes())
 
     # Add a new layer (w * h), indicating note id of each pixel.
     layers.register_layer('note_id', np.zeros(symbols.shape, dtype=np.int64)-1)
@@ -210,6 +212,7 @@ def extract(args: Namespace) -> str:
     layers.register_layer('clefs', np.array(clefs))
     layers.register_layer('sfns', np.array(sfns))
     layers.register_layer('rests', np.array(rests))
+    debug_show(f_name, 2.0, 'before_rhythm', draw_before_rhythm())
 
     # ---- Parse rhythm ---- #
     logger.info("Extracting rhythm types")
