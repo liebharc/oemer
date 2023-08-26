@@ -321,7 +321,7 @@ def init_zones(staff_pred: ndarray, splits: int) -> Tuple[ndarray, int, int, int
     return np.array(zones, dtype=object), left_bound, right_bound, bottom_bound
 
 
-def extract(splits: int = 8, line_threshold: float = 0.8, horizontal_diff_th: float = 0.1, unit_size_diff_th: float = 0.1, barline_min_degree: int = 75) -> Tuple[ndarray, ndarray]:
+def extract(splits: int = 8, line_threshold: float = 0.8, horizontal_diff_th: float = 0.1, unit_size_diff_th: float = 0.3, barline_min_degree: int = 75) -> Tuple[ndarray, ndarray]:
     # Fetch parameters from layers
     staff_pred = layers.get_layer('staff_pred')
 

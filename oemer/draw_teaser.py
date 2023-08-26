@@ -30,8 +30,14 @@ def draw_staff_and_zones() -> Image.Image:
     global out
     out = np.copy(ori_img).astype(np.uint8)
 
+    def get_bbox_for_zone(zone):
+         if isinstance(zone, range):
+              return [zone.start, 0, zone.stop, 10]
+         else:
+              return [zone.min(), 0, zone.max(), 10]
+
     draw_bbox([[gg.x_left, gg.y_upper, gg.x_right, gg.y_lower] for gg in staffs.flatten()], color=(255, 192, 92), text="staffs")
-    draw_bbox([[gg.start, 0, gg.stop, 10] for gg in zones], color=(194, 81, 167), text="zones")
+    draw_bbox([get_bbox_for_zone(gg) for gg in zones], color=(194, 81, 167), text="zones")
     return out
 
 def draw_notes() -> Image.Image:
