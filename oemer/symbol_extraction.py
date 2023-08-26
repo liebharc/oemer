@@ -433,7 +433,7 @@ def gen_rests(bboxes: List[Tuple[int, int, int, int]], labels: List[str]) -> Lis
     return rests
 
 
-def extract(min_barline_h_unit_ratio: float = 3.75) -> Tuple[List[Barline], List[Clef], List[Sfn], List[Rest]]:
+def extract(min_barline_h_unit_ratio: float = 3) -> Tuple[List[Barline], List[Clef], List[Sfn], List[Rest]]:
     # Fetch paramters
     symbols = layers.get_layer('symbols_pred')
     stems_rests = layers.get_layer('stems_rests_pred')
