@@ -17,7 +17,7 @@ import numpy as np
 from oemer import MODULE_PATH
 from oemer import layers
 from oemer.inference import inference
-from oemer.logging import get_logger
+from oemer.logging import DEBUG_LEVEL, DEBUG_OUTPUT, WINDOW_NAME, debug_show, get_logger
 from oemer.dewarp import estimate_coords, dewarp
 from oemer.staffline_extraction import extract as staff_extract
 from oemer.notehead_extraction import extract as note_extract
@@ -117,6 +117,7 @@ def extract(args: Namespace) -> str:
     pkl_path = img_path.parent / f"{f_name}.pkl"
     if pkl_path.exists():
         # Load from cache
+        logger.info("Loading from cache")
         pred = pickle.load(open(pkl_path, "rb"))
         notehead = pred["note"]
         symbols = pred["symbols"]
@@ -144,6 +145,12 @@ def extract(args: Namespace) -> str:
     # Load the original image, resize to the same size as prediction.
     image = cv2.imread(str(img_path))
     image = cv2.resize(image, (staff.shape[1], staff.shape[0]))
+    debug_show(f_name, 0.0, 'original', image)
+    debug_show(f_name, 0.0, 'staff', staff, scale=True)
+    debug_show(f_name, 0.0, 'notehead', notehead, scale=True)
+    debug_show(f_name, 0.0, 'symbols', symbols, scale=True)
+    debug_show(f_name, 0.0, 'stems_rests', stems_rests, scale=True)
+    debug_show(f_name, 0.0, 'clefs_keys', clefs_keys, scale=True)
 
     if not args.without_deskew:
         logger.info("Dewarping")
@@ -283,4 +290,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    if DEBUG_LEVEL > 0 and DEBUG_OUTPUT != 'file':
+        cv2.namedWindow(WINDOW_NAME)
     main()
