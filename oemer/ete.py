@@ -17,7 +17,7 @@ import numpy as np
 from oemer import MODULE_PATH
 from oemer import layers
 from oemer.inference import inference
-from oemer.logging import DEBUG_LEVEL, DEBUG_OUTPUT, WINDOW_NAME, debug_show, get_logger
+from oemer.logging import DEBUG_LEVEL, DEBUG_OUTPUT, WINDOW_NAME, debug_show, get_logger, set_debug_level
 from oemer.dewarp import estimate_coords, dewarp
 from oemer.staffline_extraction import extract as staff_extract
 from oemer.notehead_extraction import extract as note_extract
@@ -246,6 +246,11 @@ def get_parser() -> ArgumentParser:
         "--without-deskew",
         help="Disable the deskewing step if you are sure the image has no skew.",
         action='store_true')
+    parser.add_argument(
+        "--debug",
+        help="Enable debug mode. The debug images will be saved to the current directory.",
+        action='store_true'
+    )
     return parser
 
 
@@ -268,6 +273,8 @@ def download_file(title: str, url: str, save_path: str) -> None:
 def main() -> None:
     parser = get_parser()
     args = parser.parse_args()
+    if args.debug:
+        set_debug_level(1)
 
     if not os.path.exists(args.img_path):
         raise FileNotFoundError(f"The given image path doesn't exists: {args.img_path}")

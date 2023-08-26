@@ -7,6 +7,10 @@ DEBUG_LEVEL = 0          # 0=none, 1=some, 2=lots, 3=all
 DEBUG_OUTPUT = 'file'    # file, screen, both
 WINDOW_NAME = 'oemer'   # Window name for visualization
 
+def set_debug_level(level):
+    global DEBUG_LEVEL
+    DEBUG_LEVEL = level
+
 def get_logger(name, level="warn"):
     """Get the logger for printing informations.
     Used for layout the information of various stages while executing the program.
