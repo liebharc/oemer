@@ -172,6 +172,13 @@ def extract(args: Namespace) -> str:
     layers.register_layer("symbols_pred", symbols)
     layers.register_layer("staff_pred", staff)
     layers.register_layer("original_image", image)
+    
+    debug_show(f_name, 1.0, 'original', image)
+    debug_show(f_name, 1.0, 'staff', staff, scale=True)
+    debug_show(f_name, 1.0, 'notehead', notehead, scale=True)
+    debug_show(f_name, 1.0, 'symbols', symbols, scale=True)
+    debug_show(f_name, 1.0, 'stems_rests', stems_rests, scale=True)
+    debug_show(f_name, 1.0, 'clefs_keys', clefs_keys, scale=True)
 
     # ---- Extract staff lines and group informations ---- #
     logger.info("Extracting stafflines")
