@@ -9,7 +9,7 @@ from oemer import layers
 from oemer import exceptions as E
 from oemer.inference import predict
 from oemer.utils import get_global_unit_size, slope_to_degree, get_unit_size, find_closest_staffs
-from oemer.logging import get_logger
+from oemer.logging import debug_show, get_logger
 from oemer.general_filtering_rules import filter_out_of_range_bbox, filter_out_small_area
 from oemer.bbox import (
     merge_nearby_bbox,
@@ -424,7 +424,7 @@ def gen_rests(bboxes: List[Tuple[int, int, int, int]], labels: List[str]) -> Lis
         rr.group = st1.group
 
         unit_size = int(round(get_unit_size(*get_center(box))))
-        dot_range = range(box[2]+1, box[2]+unit_size)
+        dot_range = range(box[2]+1, min(box[2]+unit_size, symbols.shape[1] - 1))
         dot_region = symbols[box[1]:box[3], dot_range]
         if 0 < np.sum(dot_region) < unit_size**2 / 7:
             rr.has_dot = True
