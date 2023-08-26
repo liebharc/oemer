@@ -13,6 +13,7 @@ from oemer.logging import debug_show, get_logger
 from oemer.general_filtering_rules import filter_out_of_range_bbox, filter_out_small_area
 from oemer.bbox import (
     merge_nearby_bbox,
+    remove_overlapping_bbox,
     rm_merge_overlap_bbox,
     find_lines,
     draw_lines,
@@ -292,7 +293,7 @@ def parse_clefs_keys(clefs_keys: ndarray, unit_size: float64, clef_size_ratio: f
     return clef_box, key_box, clef_label, key_label
 
 
-def parse_rests(line_box: ndarray, unit_size: float64) -> Tuple[List[Tuple[int, int, int, int]], List[str]]:
+def parse_rests(line_box: ndarray, unit_size: float64, barlines: List[Tuple[int, int, int, int]]) -> Tuple[List[Tuple[int, int, int, int]], List[str]]:
     stems_rests = layers.get_layer('stems_rests_pred')
     group_map = layers.get_layer('group_map')
 
@@ -313,6 +314,7 @@ def parse_rests(line_box: ndarray, unit_size: float64) -> Tuple[List[Tuple[int, 
     bboxes = merge_nearby_bbox(bboxes, unit_size*1.2)
     bboxes = rm_merge_overlap_bbox(bboxes)
     bboxes = filter_out_small_area(bboxes, area_size_func=lambda usize: usize**2 * 0.7)
+    bboxes = remove_overlapping_bbox(bboxes, barlines)
     temp = draw_bounding_boxes(bboxes, temp)
 
     label = []
@@ -449,7 +451,7 @@ def extract(min_barline_h_unit_ratio: float = 3) -> Tuple[List[Barline], List[Cl
     clefs = gen_clefs(clef_box, clef_label)
     accidentals = gen_accidentals(key_box, key_label)
 
-    rest_box, rest_label = parse_rests(line_box, unit_size)
+    rest_box, rest_label = parse_rests(line_box, unit_size, [c.bbox for c in barlines])
     rests = gen_rests(rest_box, rest_label)
 
     return barlines, clefs, accidentals, rests

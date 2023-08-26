@@ -108,7 +108,18 @@ def rm_merge_overlap_bbox(bboxes: List[Tuple[int, int, int, int]], mode: str = '
     valid_box = [info['bbox'] for info in records.values()]
     return valid_box
 
-
+def remove_overlapping_bbox(bboxes: List[Tuple[int, int, int, int]], forbidden_areas: List[Tuple[int, int, int, int]], overlap_ratio: float = 0.5) -> List[Tuple[int, int, int, int]]:
+    result = []
+    for bbox in bboxes:
+        overlap = False
+        for area in forbidden_areas:
+            if bbox[0] < area[2] and bbox[2] > area[0] and bbox[1] < area[3] and bbox[3] > area[1]:
+                overlap = True
+                break
+        if not overlap:
+            result.append(bbox)
+    return result
+    
 def find_lines(data: ndarray, min_len: int = 10, max_gap: int = 20) -> List[Tuple[int, int, int, int]]:
     assert len(data.shape) == 2, f"{type(data)} {data.shape}"
 
