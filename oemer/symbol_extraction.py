@@ -372,7 +372,7 @@ def get_nearby_note_id(box: Tuple[int, int, int, int], note_id_map: ndarray) -> 
     return nid
 
 
-def gen_sfns(bboxes: List[Tuple[int, int, int, int]], labels: List[str]) -> List[Sfn]:
+def gen_accidentals(bboxes: List[Tuple[int, int, int, int]], labels: List[str]) -> List[Sfn]:
     note_id_map = layers.get_layer('note_id')
     notes = layers.get_layer('notes')
 
@@ -447,12 +447,12 @@ def extract(min_barline_h_unit_ratio: float = 3) -> Tuple[List[Barline], List[Cl
     unit_size = get_global_unit_size()
     clef_box, key_box, clef_label, key_label = parse_clefs_keys(clefs_keys, unit_size)
     clefs = gen_clefs(clef_box, clef_label)
-    sfns = gen_sfns(key_box, key_label)
+    accidentals = gen_accidentals(key_box, key_label)
 
     rest_box, rest_label = parse_rests(line_box, unit_size)
     rests = gen_rests(rest_box, rest_label)
 
-    return barlines, clefs, sfns, rests
+    return barlines, clefs, accidentals, rests
 
 
 def draw_symbols(symbols, ori_img, labels=None, color=(235, 64, 52)):

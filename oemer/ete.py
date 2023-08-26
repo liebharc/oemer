@@ -217,10 +217,10 @@ def extract(args: Namespace) -> str:
 
     # ---- Extract symbols ---- #
     logger.info("Extracting symbols")
-    barlines, clefs, sfns, rests = symbol_extract()
+    barlines, clefs, accidentals, rests = symbol_extract()
     layers.register_layer('barlines', np.array(barlines))
     layers.register_layer('clefs', np.array(clefs))
-    layers.register_layer('sfns', np.array(sfns))
+    layers.register_layer('accidentals', np.array(accidentals))
     layers.register_layer('rests', np.array(rests))
     debug_show(f_name, 2.0, 'before_rhythm', draw_before_rhythm())
 

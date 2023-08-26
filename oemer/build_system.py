@@ -789,7 +789,7 @@ def sort_symbols(voices: List[Voice]) -> Dict[int, List[Any]]:
     barlines = layers.get_layer('barlines')
     rests = layers.get_layer('rests')
     clefs = layers.get_layer('clefs')
-    sfns = layers.get_layer('sfns')
+    accidentals = layers.get_layer('accidentals')
 
     # Assign symbols to the coressponding group
     group_container: Any = {}
@@ -803,7 +803,7 @@ def sort_symbols(voices: List[Voice]) -> Dict[int, List[Any]]:
     sort_group(barlines)
     sort_group(rests)
     sort_group(clefs)
-    sort_group([sfn for sfn in sfns if sfn.note_id is None])  # Exclude accidental
+    sort_group([sfn for sfn in accidentals if sfn.note_id is None])  # Exclude accidental
 
     # Sort by their x-center
     for k in group_container:
@@ -1084,7 +1084,7 @@ if __name__ == "__main__":
     barlines = layers.get_layer('barlines')
     rests = layers.get_layer('rests')
     clefs = layers.get_layer('clefs')
-    sfns = layers.get_layer('sfns')
+    accidentals = layers.get_layer('accidentals')
 
     voices = get_voices()
     group_container = sort_symbols(voices)
