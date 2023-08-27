@@ -416,6 +416,8 @@ def parse_inner_groups(poly_map, group, set_box, note_type_map, half_scan_width,
             end_y=end_y,
             threshold=threshold
         )
+        if count >= len(note_type_map):
+            return note_type_map[len(note_type_map) - 1]
         return note_type_map[count]
 
     if len(nts) == 2:
