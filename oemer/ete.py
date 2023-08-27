@@ -252,7 +252,7 @@ def get_parser() -> ArgumentParser:
         "Oemer",
         description="End-to-end OMR command line tool. Receives an image as input, and outputs MusicXML file.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("img_path", help="Path to the image.", type=str)
+    parser.add_argument("img_path", help="Path to the image.", type=str, nargs='?')
     parser.add_argument(
         "-o", "--output-path", help="Path to output the result file.", type=str, default="./")
     parser.add_argument(
