@@ -713,6 +713,9 @@ class MusicXMLBuilder:
         for _, measures in self.measures.items():
             keys.extend([measure.get_key() for measure in measures if measure.has_key()])
 
+        if len(keys) == 0:
+            return
+
         dominant_key = max(keys, key=keys.count)
         for _, measures in self.measures.items():
             for measure in measures:
