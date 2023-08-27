@@ -206,6 +206,8 @@ class Measure:
         if not all_equal:
             logger.warning("The number of key symbols are not all the same for every track!")
 
+        if len(sfns_cands) == 0:
+            return Key(0)
         sfn_label = sfns_cands[0].label
         if not all_same:
             # Count the most occurance.

@@ -34,14 +34,18 @@ def scan_dot(symbols: ndarray, note_id_map: ndarray, bbox: Tuple[int, int, int, 
         # Find the right most bound for scan the dot.
         # Should have width less than unit_size, and can't
         # touch the nearby note.
-        cur_scan_line = note_id_map[int(start_y):int(bbox[3]), int(right_bound)]
-        ids = set(np.unique(cur_scan_line))
-        if -1 in ids:
-            ids.remove(-1)
-        if len(ids) > 0:
-            break
-        right_bound += 1
-        if right_bound >= bbox[2] + unit_size:
+        try:
+            cur_scan_line = note_id_map[int(start_y):int(bbox[3]), int(right_bound)]
+            ids = set(np.unique(cur_scan_line))
+            if -1 in ids:
+                ids.remove(-1)
+            if len(ids) > 0:
+                break
+            right_bound += 1
+            if right_bound >= bbox[2] + unit_size:
+                break
+        except IndexError as e:
+            print(e)
             break
 
     left_bound = bbox[2] + round(unit_size*0.4)
@@ -583,7 +587,10 @@ def parse_rhythm(beam_map: ndarray, map_info: Dict[int, Dict[str, Any]], agree_t
         # Assign note label
         for nid in group.note_ids:
             if notes[nid].label is None:
-                notes[nid].label = note_type_map[count] # type: ignore
+                if count < len(note_type_map):
+                    notes[nid].label = note_type_map[count] # type: ignore
+                else:
+                    notes[nid].invalid = True
 
     return beam_img
 
