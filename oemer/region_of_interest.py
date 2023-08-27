@@ -2,8 +2,10 @@ from oemer import layers
 import cv2
 import numpy as np
 
-def calculate_region_of_interest(notehead: np.ndarray, staff: np.ndarray, clefs_keys: np.ndarray) -> np.ndarray:
-    staff_and_notehead = notehead.astype(np.float32) + staff.astype(np.float32) + clefs_keys.astype(np.float32)
+def calculate_region_of_interest(detected_layers: list[np.ndarray]) -> np.ndarray:
+    staff_and_notehead = detected_layers[0].astype(np.float32)
+    for layer in detected_layers[1:]:
+        staff_and_notehead += layer.astype(np.float32)
     dilation_shape = cv2.MORPH_ELLIPSE
     dilatation_size = 51
     dilatation_element = cv2.getStructuringElement(dilation_shape, (1, 2 * dilatation_size + 1))

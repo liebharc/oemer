@@ -168,11 +168,10 @@ def extract(args: Namespace) -> str:
     # Register predictions
     symbols = symbols + clefs_keys + stems_rests
     symbols[symbols>1] = 1
-    roi = calculate_region_of_interest(notehead, staff, clefs_keys)
+    roi = calculate_region_of_interest([notehead, staff, clefs_keys])
     stems_rests = cv2.bitwise_and(stems_rests, stems_rests, mask = roi)
     clefs_keys = cv2.bitwise_and(clefs_keys, clefs_keys, mask = roi)
     notehead = cv2.bitwise_and(notehead, notehead, mask = roi)
-    symbols = cv2.bitwise_and(symbols, symbols, mask = roi)
     staff = cv2.bitwise_and(staff, staff, mask = roi)
     layers.register_layer("roi", roi)
     layers.register_layer("stems_rests_pred", stems_rests)
