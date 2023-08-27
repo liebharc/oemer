@@ -329,6 +329,7 @@ def parse_rests(line_box: ndarray, unit_size: float64, barlines: List[Tuple[int,
             continue
 
         region = rests[box[1]:box[3], box[0]:box[2]]
+        # Rest predictions
         pred = predict(region, "rests")
         if "8th" in pred:
             pred = predict(region, "rests_above8")

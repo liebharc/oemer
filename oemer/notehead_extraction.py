@@ -413,7 +413,7 @@ def extract(
     min_area_ratio: float = 0.5,
     max_whole_note_width_factor: float = 1.5,
     y_dist_factor: int = 5,
-    hollow_filled_ratio_th: float = 1.3) -> List[NoteHead]:
+    hollow_filled_ratio_th: float = 1.0) -> List[NoteHead]:
 
     # Fetch parameters from layers
     pred = layers.get_layer('notehead_pred')
@@ -454,6 +454,7 @@ def extract(
         cv2.rectangle(nn_img, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
         cv2.putText(nn_img, f"{ratio:.2f}", (box[2]+2, box[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 1)
 
+        # Tell hollow and solid notes apart
         if ratio > hollow_filled_ratio_th:
             hollow_box.append(box)
         else:
