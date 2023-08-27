@@ -155,16 +155,19 @@ def filter_barlines(lines: List[Tuple[int, int, int, int]], min_height_unit_rati
 
     # First round check, with line mode.
     valid_lines = []
+    unit_sizes = []
     for line in lines:
         x1, y1, x2, y2 = line
         unit_size = get_unit_size(*get_center(line))
 
         # Check slope. Degree should be within 80~100.
         deg = slope_to_degree(y2-y1, x2-x1)
-        if abs(deg) < 75:
+        if abs(deg) < 60:
             continue
 
+        unit_sizes.append(unit_size)
         valid_lines.append(line)
+    unit_size = np.mean(unit_sizes)
 
     # Second round check, in bbox mode.
     valid_lines = np.array(valid_lines) # type: ignore
