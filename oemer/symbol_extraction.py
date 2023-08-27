@@ -41,7 +41,7 @@ class ClefType(enum.Enum):
     F_CLEF = 2
 
 
-class SfnType(enum.Enum):
+class AccidentalType(enum.Enum):
     FLAT = 1
     SHARP = 2
     NATURAL = 3
@@ -82,22 +82,22 @@ class Clef:
         return f"Clef: {self.label.name} / Track: {self.track} / Group: {self.group}"
 
 
-class Sfn:
+class Accidental:
     def __init__(self) -> None:
         self.bbox: list[int] | Any = None
         self.note_id: int | Any = None
         self.is_key: bool | Any = None  # Whether is key or accidental
         self.track: int | Any = None
         self.group: int | Any = None
-        self._label: SfnType | Any = None
+        self._label: AccidentalType | Any = None
 
     @property
-    def label(self) -> SfnType:
+    def label(self) -> AccidentalType:
         return self._label
 
     @label.setter
-    def label(self, val: SfnType) -> None:
-        assert isinstance(val, SfnType)
+    def label(self, val: AccidentalType) -> None:
+        assert isinstance(val, AccidentalType)
         self._label = val
 
     @property
@@ -377,19 +377,19 @@ def get_nearby_note_id(box: Tuple[int, int, int, int], note_id_map: ndarray) -> 
     return nid
 
 
-def gen_accidentals(bboxes: List[Tuple[int, int, int, int]], labels: List[str]) -> List[Sfn]:
+def gen_accidentals(bboxes: List[Tuple[int, int, int, int]], labels: List[str]) -> List[Accidental]:
     note_id_map = layers.get_layer('note_id')
     notes = layers.get_layer('notes')
 
     name_type_map = {
-        "sharp": SfnType.SHARP,
-        "flat": SfnType.FLAT,
-        "natural": SfnType.NATURAL
+        "sharp": AccidentalType.SHARP,
+        "flat": AccidentalType.FLAT,
+        "natural": AccidentalType.NATURAL
     }
     sfns = []
     for box, label in zip(bboxes, labels):
         st1, _ = find_closest_staffs(*get_center(box))
-        ss = Sfn()
+        ss = Accidental()
         ss.bbox = box
         ss.label = name_type_map[label]
         ss.note_id = get_nearby_note_id(box, note_id_map)
@@ -439,7 +439,7 @@ def gen_rests(bboxes: List[Tuple[int, int, int, int]], labels: List[str]) -> Lis
     return rests
 
 
-def extract(min_barline_h_unit_ratio: float = 3) -> Tuple[List[Barline], List[Clef], List[Sfn], List[Rest]]:
+def extract(min_barline_h_unit_ratio: float = 3) -> Tuple[List[Barline], List[Clef], List[Accidental], List[Rest]]:
     # Fetch paramters
     symbols = layers.get_layer('symbols_pred')
     stems_rests = layers.get_layer('stems_rests_pred')

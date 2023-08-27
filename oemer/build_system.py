@@ -10,7 +10,7 @@ import numpy as np
 from typing import Union
 
 from oemer import layers
-from oemer.symbol_extraction import Barline, Clef, Sfn, Rest, SfnType, ClefType, RestType
+from oemer.symbol_extraction import Barline, Clef, Accidental, Rest, AccidentalType, ClefType, RestType
 from oemer.note_group_extraction import NoteGroup
 from oemer.notehead_extraction import NoteHead, NoteType
 from oemer.utils import get_global_unit_size, get_total_track_nums
@@ -126,7 +126,7 @@ class Measure:
         self.has_clef: bool = False
         self.clefs: list[Clef] = []
         self.voices: list[NoteGroup] = []
-        self.sfns: list[Sfn] = []
+        self.sfns: list[Accidental] = []
         self.rests: list[Rest] = []
         self.number: int | Any = None
         self.at_beginning: bool | Any = None
@@ -136,7 +136,7 @@ class Measure:
         self.time_slots: list[object] = []
         self.slot_duras: np.ndarray | Any = None
 
-    def add_symbols(self, symbols: Union[List[Union[Clef, Rest, Sfn]], List[Voice]]) -> None:
+    def add_symbols(self, symbols: Union[List[Union[Clef, Rest, Accidental]], List[Voice]]) -> None:
         self.symbols.extend(symbols)
         self.symbols = sorted(self.symbols, key=lambda s: s.x_center)
         for sym in symbols:
@@ -145,7 +145,7 @@ class Measure:
             elif isinstance(sym, Clef):
                 self.clefs.append(sym)
                 self.has_clef = True
-            elif isinstance(sym, Sfn):
+            elif isinstance(sym, Accidental):
                 self.sfns.append(sym)
             elif isinstance(sym, Rest):
                 self.rests.append(sym)
@@ -162,7 +162,7 @@ class Measure:
         total_tracks = get_total_track_nums()
         start_idx = total_tracks if self.at_beginning else 0
         syms =  self.symbols[start_idx:start_idx+total_tracks]
-        return all(isinstance(sym, Sfn) for sym in syms)
+        return all(isinstance(sym, Accidental) for sym in syms)
     
     def set_key_override(self, key: Key) -> None:
         self.key_override = key
@@ -190,7 +190,7 @@ class Measure:
         sfns_cands = []  # Candidates of key
         for i in range(start_idx, end_idx):
             sym = self.symbols[i]
-            if not isinstance(sym, Sfn):
+            if not isinstance(sym, Accidental):
                 break
             sfns_cands.append(sym)
 
@@ -209,31 +209,31 @@ class Measure:
         sfn_label = sfns_cands[0].label
         if not all_same:
             # Count the most occurance.
-            counter = {SfnType.FLAT: 0, SfnType.SHARP: 0, SfnType.NATURAL: 0}
+            counter = {AccidentalType.FLAT: 0, AccidentalType.SHARP: 0, AccidentalType.NATURAL: 0}
             for sfn in sfns_cands:
                 counter[sfn.label] += 1
             counter = sorted(counter.items(), key=lambda s: s[1], reverse=True) # type: ignore
-            if counter[0][0] == SfnType.NATURAL: # type: ignore
+            if counter[0][0] == AccidentalType.NATURAL: # type: ignore
                 # Swap the first and second candidates when the first sfn type is natural.
                 counter[0], counter[1] = counter[1], counter[0] # type: ignore
 
-            if counter[0][0] == SfnType.FLAT: # type: ignore
+            if counter[0][0] == AccidentalType.FLAT: # type: ignore
                 # Flat and sharp/natural is assumed will not being confused by the model.
-                sfn_label = SfnType.FLAT
-            elif counter[0][0] == SfnType.SHARP: # type: ignore
-                if counter[1][0] == SfnType.FLAT: # type: ignore
-                    sfn_label = SfnType.SHARP
+                sfn_label = AccidentalType.FLAT
+            elif counter[0][0] == AccidentalType.SHARP: # type: ignore
+                if counter[1][0] == AccidentalType.FLAT: # type: ignore
+                    sfn_label = AccidentalType.SHARP
                 elif counter[0][1] > counter[1][1]: # type: ignore
                     # Sharp and natural are the most error-prone for prediction.
-                    sfn_label = SfnType.SHARP
+                    sfn_label = AccidentalType.SHARP
                 else:
                     # The most special case that number of sharp and natural are the same,
                     # which means the key indeed contains natural.
                     # TODO: should allow natural key
-                    sfn_label = SfnType.SHARP
+                    sfn_label = AccidentalType.SHARP
 
         count = round(sum(sfn_counts) / track_nums)
-        if sfn_label == SfnType.FLAT:
+        if sfn_label == AccidentalType.FLAT:
             count *= -1
 
         # Update the sfn state
@@ -272,7 +272,7 @@ class Measure:
                     continue
                 # TODO: process non-beginning case.
                 continue
-            elif isinstance(sym, Sfn):
+            elif isinstance(sym, Accidental):
                 continue
 
             if last_x is None:
@@ -412,7 +412,7 @@ class Action:
     class Context:
         key: Union[Key, None] = None
         clefs: List[Clef] = []
-        sfn_state: Mapping[str, Sfn] = {chr(ord('A')+i):None for i in range(7)} # type: ignore
+        sfn_state: Mapping[str, Accidental] = {chr(ord('A')+i):None for i in range(7)} # type: ignore
 
     ctx = Context()
 
@@ -428,10 +428,10 @@ class Action:
         cls.ctx.sfn_state = {chr(ord('A')+i):None for i in range(7)}
         if cls.ctx.key.value > 0:
             for sfn_name in SHARP_KEY_ORDER[:cls.ctx.key.value]:
-                cls.ctx.sfn_state[sfn_name] = SfnType.SHARP
+                cls.ctx.sfn_state[sfn_name] = AccidentalType.SHARP
         elif cls.ctx.key.value < 0:
             for sfn_name in FLAT_KEY_ORDER[:-cls.ctx.key.value]:
-                cls.ctx.sfn_state[sfn_name] = SfnType.FLAT
+                cls.ctx.sfn_state[sfn_name] = AccidentalType.FLAT
 
     @classmethod
     def clear(cls) -> None:
@@ -613,7 +613,7 @@ class MusicXMLBuilder:
                         if cur_clefs[track].label != sym.label:
                             self.actions.append(ClefChange(sym))
                             cur_clefs[track] = sym
-                    elif isinstance(sym, Sfn):
+                    elif isinstance(sym, Accidental):
                         if measure.has_key():
                             key = measure.get_key()
                             if key != cur_key:
@@ -751,7 +751,7 @@ class MusicXMLBuilder:
         return mxl_str
 
 
-def gen_measure(buffer: Union[List[Union[Clef, Rest, Sfn]], List[Voice]], grp: int, num: int, at_beginning: bool = False, double_barline: bool = False) -> Measure:
+def gen_measure(buffer: Union[List[Union[Clef, Rest, Accidental]], List[Voice]], grp: int, num: int, at_beginning: bool = False, double_barline: bool = False) -> Measure:
     mm = Measure()
     mm.add_symbols(buffer)
     mm.double_barline = double_barline
@@ -815,7 +815,7 @@ def sort_symbols(voices: List[Voice]) -> Dict[int, List[Any]]:
 
     # Assign symbols to the coressponding group
     group_container: Any = {}
-    def sort_group(insts: Union[List[Voice], List[Sfn], ndarray]) -> None:
+    def sort_group(insts: Union[List[Voice], List[Accidental], ndarray]) -> None:
         for inst in insts:
             if inst.group not in group_container:
                 group_container[inst.group] = []
@@ -951,9 +951,9 @@ def decode_note(note, clef_type, is_chord=False, voice=1) -> Element:
     else:
         octave.text  = str(-math.ceil((pos + pitch_offset) / -7) + oct_offset)
     if note.sfn is not None:
-        if note.sfn == SfnType.SHARP:
+        if note.sfn == AccidentalType.SHARP:
             alter.text = '1'
-        elif note.sfn == SfnType.FLAT:
+        elif note.sfn == AccidentalType.FLAT:
             alter.text = '-1'
 
     # Check the pitch is within A0~C8
