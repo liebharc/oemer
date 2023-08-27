@@ -231,7 +231,7 @@ def extract(args: Namespace) -> str:
     # ---- Build MusicXML ---- #
     logger.info("Building MusicXML document")
     basename = os.path.basename(img_path).replace(".jpg", "").replace(".png", "")
-    builder = MusicXMLBuilder(title=basename.capitalize())
+    builder = MusicXMLBuilder(title=basename.capitalize(), assume_simple=args.assume_simple)
     builder.build()
     xml = builder.to_musicxml()
 
@@ -271,6 +271,15 @@ def get_parser() -> ArgumentParser:
         help="Enable debug mode. The debug images will be saved to the current directory.",
         action='store_true'
     )
+    parser.add_argument(
+        "--assume-simple",
+        help="Instruct the detection to assume simple sheet music. This increases the robustness. Assumptions are:\n- only one key",
+        action='store_true'
+    )
+    parser.add_argument(
+        "--just-download-model",
+        help="Just downloads the models and exits afterwards. Other arguments will be ignored.",
+        action='store_true')
     return parser
 
 
@@ -296,8 +305,11 @@ def main() -> None:
     if args.debug:
         set_debug_level(1)
 
-    if not os.path.exists(args.img_path):
-        raise FileNotFoundError(f"The given image path doesn't exists: {args.img_path}")
+    if not args.just_download_model:
+        if not args.img_path:
+            raise ValueError("Please specify the image path.")
+        if not os.path.exists(args.img_path):
+            raise FileNotFoundError(f"The given image path doesn't exists: {args.img_path}")
 
     # Check there are checkpoints
     chk_path = os.path.join(MODULE_PATH, "checkpoints/unet_big/model.onnx")
@@ -309,6 +321,10 @@ def main() -> None:
             save_dir = os.path.join(MODULE_PATH, "checkpoints", save_dir)
             save_path = os.path.join(save_dir, title.split("_")[1])
             download_file(title, url, save_path)
+
+    if args.just_download_model:
+        logger.info("Downloaded model, exiting now as --just-download-model is set.")
+        return
 
     clear_data()
     mxl_path = extract(args)
