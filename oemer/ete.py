@@ -155,15 +155,26 @@ def extract(args: Namespace) -> str:
     debug_show(f_name, 0.0, 'clefs_keys', clefs_keys, scale=True)
 
     if not args.without_deskew:
-        logger.info("Dewarping")
-        coords_x, coords_y = estimate_coords(staff)
-        staff = dewarp(staff, coords_x, coords_y)
-        symbols = dewarp(symbols, coords_x, coords_y)
-        stems_rests = dewarp(stems_rests, coords_x, coords_y)
-        clefs_keys = dewarp(clefs_keys, coords_x, coords_y)
-        notehead = dewarp(notehead, coords_x, coords_y)
-        for i in range(image.shape[2]):
-            image[..., i] = dewarp(image[..., i], coords_x, coords_y)
+        try:
+            logger.info("Dewarping")
+            coords_x, coords_y = estimate_coords(staff)
+            staff_dewarped = dewarp(staff, coords_x, coords_y)
+            symbols_dewarped = dewarp(symbols, coords_x, coords_y)
+            stems_rests_dewarped = dewarp(stems_rests, coords_x, coords_y)
+            clefs_keys_dewarped = dewarp(clefs_keys, coords_x, coords_y)
+            notehead_dewarped = dewarp(notehead, coords_x, coords_y)
+            image_dewarped = image.copy()
+            for i in range(image.shape[2]):
+                image_dewarped[..., i] = dewarp(image[..., i], coords_x, coords_y)
+            logger.info("Dewarping done")
+            staff = staff_dewarped
+            symbols = symbols_dewarped
+            stems_rests = stems_rests_dewarped
+            clefs_keys = clefs_keys_dewarped
+            notehead = notehead_dewarped
+            image = image_dewarped
+        except Exception as e:
+            logger.error("Dewarping failed, skipping.")
 
     # Register predictions
     symbols = symbols + clefs_keys + stems_rests
