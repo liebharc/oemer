@@ -1,15 +1,16 @@
 
-import numpy as np
-import cv2
-from numpy import ndarray
 from typing import Tuple
+
+import cv2
+import numpy as np
+from numpy import ndarray
 
 
 def get_kernel(kernel: Tuple[int, int]) -> ndarray:
     if isinstance(kernel, tuple):
         # It's kernel shape
-        kernel = np.ones(kernel, dtype=np.uint8) # type: ignore
-    return kernel # type: ignore
+        kernel = np.ones(kernel, dtype=np.uint8)  # type: ignore
+    return kernel  # type: ignore
 
 
 def morph_open(img: ndarray, kernel: Tuple[int, int]) -> ndarray:

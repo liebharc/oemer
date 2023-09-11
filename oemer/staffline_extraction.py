@@ -1,9 +1,12 @@
+from typing import List, Any, cast, Tuple
+from typing_extensions import Self
 import enum
 import pickle
 
 import cv2
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+from numpy import bool_, ndarray
 from scipy.signal import find_peaks
 from sklearn.cluster import KMeans
 from sklearn.linear_model import LinearRegression
@@ -11,13 +14,7 @@ from sklearn.linear_model import LinearRegression
 from oemer import layers
 from oemer import exceptions as E
 from oemer.logging import get_logger
-from oemer.bbox import find_lines, get_bbox, get_center
-from numpy import bool_
-from numpy import float64
-from typing import List, Any, cast
-from typing_extensions import Self
-from numpy import ndarray
-from typing import Tuple
+from oemer.bbox import BBox, find_lines, get_bbox, get_center
 
 
 logger = get_logger(__name__)
@@ -280,7 +277,7 @@ class Staff:
             f"\tSlope: {self.slope}\n" \
             ")\n"
 
-    def __sub__(self, st: List[int]) -> float64:
+    def __sub__(self, st: List[int]) -> float:
         if isinstance(st, Staff):
             x, y = st.x_center, st.y_center
         else:
@@ -321,7 +318,12 @@ def init_zones(staff_pred: ndarray, splits: int) -> Tuple[ndarray, int, int, int
     return np.array(zones, dtype=object), left_bound, right_bound, bottom_bound
 
 
-def extract(splits: int = 8, line_threshold: float = 0.8, horizontal_diff_th: float = 0.1, unit_size_diff_th: float = 0.3, barline_min_degree: int = 75) -> Tuple[ndarray, ndarray]:
+def extract(
+        splits: int = 8, 
+        line_threshold: float = 0.8, 
+        horizontal_diff_th: float = 0.1, 
+        unit_size_diff_th: float = 0.3, 
+        barline_min_degree: int = 75) -> Tuple[ndarray, ndarray]:
     # Fetch parameters from layers
     staff_pred = layers.get_layer('staff_pred')
 
@@ -335,11 +337,11 @@ def extract(splits: int = 8, line_threshold: float = 0.8, horizontal_diff_th: fl
         if staffs is not None:
             all_staffs.append(staffs)
             print(len(staffs))
-    all_staffs = align_staffs(all_staffs) # type: ignore
-    all_staffs = align_every_row(all_staffs) # type: ignore
+    all_staffs = align_staffs(all_staffs)  # type: ignore
+    all_staffs = align_every_row(all_staffs)  # type: ignore
 
     # Use barline information to infer the number of tracks for each group.
-    num_track = further_infer_track_nums(all_staffs, min_degree=barline_min_degree) # type: ignore
+    num_track = further_infer_track_nums(all_staffs, min_degree=barline_min_degree)  # type: ignore
     logger.debug(f"Tracks: {num_track}")
     for col_sts in all_staffs:
         for idx, st in enumerate(col_sts):
@@ -353,7 +355,7 @@ def extract(splits: int = 8, line_threshold: float = 0.8, horizontal_diff_th: fl
     assert all([len(staff) == len(all_staffs[0]) for staff in all_staffs])
 
     norm = lambda data: np.abs(np.array(data) / np.mean(data) - 1)
-    for staffs in all_staffs.T: # type: ignore
+    for staffs in all_staffs.T:  # type: ignore
         # Should all have 5 lines
         line_num = [len(staff.lines) for staff in staffs]
         if len(set(line_num)) != 1:
@@ -381,7 +383,7 @@ def extract_part(pred: ndarray, x_offset: int, line_threshold: float = 0.8) -> L
 
     # To assure there contains at leat one staff lines and above
     if len(lines) < 5:
-        return None # type: ignore
+        return None  # type: ignore
 
     staffs = []
     line_buffer: Any = []
@@ -450,7 +452,7 @@ def extract_line(pred: ndarray, x_offset: int, line_threshold: float = 0.8) -> T
         idx += 1
 
     lines = np.array(lines)[valid_centers]
-    return lines, norm # type: ignore
+    return lines, norm  # type: ignore
 
 
 def filter_line_peaks(peaks: ndarray, norm: ndarray, max_gap_ratio: float = 1.5) -> Tuple[ndarray, List[int]]:
@@ -655,12 +657,12 @@ def further_infer_track_nums(staffs: ndarray, min_degree: int = 75) -> int:
         unit_size = naive_get_unit_size(staffs, *get_center(box))
         if h > unit_size:
             h_ratios.append(h / unit_size)
-    h_ratios = np.array(h_ratios) # type: ignore
+    h_ratios = np.array(h_ratios)  # type: ignore
 
     num_track = 1
     factor = 10
     for i in range(1, 10):
-        valid_h = len(h_ratios[h_ratios>factor*i]) # type: ignore
+        valid_h = len(h_ratios[h_ratios>factor*i])  # type: ignore
         if valid_h * (i+1) > staffs.shape[1]:
             num_track += 1
         else:
@@ -668,11 +670,11 @@ def further_infer_track_nums(staffs: ndarray, min_degree: int = 75) -> int:
     return num_track
 
 
-def get_degree(line: Tuple[int, int, int, int]) -> float64:
+def get_degree(line: BBox) -> float:
     return np.rad2deg(np.arctan2(line[3] - line[1], line[2] - line[0]))
 
 
-def filter_lines(lines: List[Tuple[int, int, int, int]], staffs: ndarray, min_degree: int = 75) -> List[Tuple[int, int, int, int]]:
+def filter_lines(lines: List[BBox], staffs: ndarray, min_degree: int = 75) -> List[BBox]:
     min_y = 9999999
     min_x = 9999999
     max_y = 0
@@ -701,24 +703,24 @@ def filter_lines(lines: List[Tuple[int, int, int, int]], staffs: ndarray, min_de
     return cands
 
 
-def get_barline_map(symbols: ndarray, bboxes: List[Tuple[int, int, int, int]]) -> ndarray:
+def get_barline_map(symbols: ndarray, bboxes: List[BBox]) -> ndarray:
     img = np.zeros_like(symbols)
     for box in bboxes:
-        box = list(box) # type: ignore
+        box = list(box)  # type: ignore
         if box[2]-box[0] == 0:
-            box[2] += 1 # type: ignore
+            box[2] += 1  # type: ignore
         img[box[1]:box[3], box[0]:box[2]] += symbols[box[1]:box[3], box[0]:box[2]]
     img[img>1] = 1
     return img
 
 
-def naive_get_unit_size(staffs: ndarray, x: int, y: int) -> float64:
+def naive_get_unit_size(staffs: ndarray, x: int, y: int) -> float:
     flat_staffs = staffs.reshape(-1, 1).squeeze()
 
-    def dist(st: Staff) -> float64:
+    def dist(st: Staff) -> float:
         x_diff = st.x_center - x
         y_diff = st.y_center - y
-        return x_diff ** 2 + y_diff ** 2 # type: ignore
+        return x_diff ** 2 + y_diff ** 2  # type: ignore
 
     dists = [(st.unit_size, dist(st)) for st in flat_staffs]
     dists = sorted(dists, key=lambda it: it[1])
@@ -752,6 +754,6 @@ if __name__ == "__main__":
     peaks, _ = find_peaks(norm, height=threshold, distance=8, prominence=1)
     valid_peaks, groups = filter_line_peaks(peaks, norm)
     peaks = peaks[valid_peaks]
-    plt.plot(norm) # type: ignore
+    plt.plot(norm)  # type: ignore
     plt.plot(peaks, [threshold]*len(peaks), 'ro')
     plt.show()

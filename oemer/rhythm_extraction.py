@@ -1,22 +1,18 @@
+from typing import Tuple, List, Any, Dict
 import random
 import math
 
 import cv2
-import numpy as np
 import scipy.ndimage
+import numpy as np
+from numpy import ndarray
 
 from oemer import layers
 from oemer.utils import get_unit_size
 from oemer.logging import get_logger
-from oemer.bbox import get_center, get_rotated_bbox, to_rgb_img, draw_bounding_boxes
+from oemer.bbox import BBox, get_center, get_rotated_bbox, to_rgb_img, draw_bounding_boxes
 from oemer.notehead_extraction import NoteType
 from oemer.morph import morph_open, morph_close
-from numpy import float64
-from numpy import ndarray
-from typing import Tuple
-from typing import List
-from typing import Any
-from typing import Dict
 
 # Globals
 dot_img: ndarray
@@ -27,7 +23,13 @@ ratio_map: ndarray
 logger = get_logger(__name__)
 
 
-def scan_dot(symbols: ndarray, note_id_map: ndarray, bbox: Tuple[int, int, int, int], unit_size: float64, min_count: int, max_count: int) -> bool:
+def scan_dot(
+        symbols: ndarray, 
+        note_id_map: ndarray, 
+        bbox: BBox, 
+        unit_size: float, 
+        min_count: int, 
+        max_count: int) -> bool:
     right_bound = bbox[2] + 1
     start_y = bbox[1] - round(unit_size / 2)
     while True:
@@ -88,7 +90,7 @@ def parse_dot(min_area_ratio: float = 0.08, max_area_ratio: float = 0.2) -> None
         gbox = group.bbox
         unit_size = get_unit_size(*get_center(gbox))
         nbox = np.array([notes[nid].bbox for nid in nids])
-        nbox = (np.min(nbox[:, 0]), np.min(nbox[:, 1]), np.max(nbox[:, 2]), np.max(nbox[:, 3])) # type: ignore
+        nbox = (np.min(nbox[:, 0]), np.min(nbox[:, 1]), np.max(nbox[:, 2]), np.max(nbox[:, 3]))  # type: ignore
         min_count = round(unit_size**2 * min_area_ratio)
         max_count = round(unit_size**2 * max_area_ratio)
 
@@ -111,7 +113,12 @@ def parse_dot(min_area_ratio: float = 0.08, max_area_ratio: float = 0.2) -> None
                     notes[nid].has_dot = to_dot
 
 
-def polish_symbols(staff_pred: ndarray, symbols: ndarray, stems: ndarray, clefs_sfns: ndarray, group_map: ndarray) -> ndarray:
+def polish_symbols(
+        staff_pred: ndarray, 
+        symbols: ndarray, 
+        stems: ndarray, 
+        clefs_sfns: ndarray, 
+        group_map: ndarray) -> ndarray:
     st_width = 5
     beams_in_staff = morph_open(staff_pred, (st_width, 1))
 
@@ -125,7 +132,13 @@ def polish_symbols(staff_pred: ndarray, symbols: ndarray, stems: ndarray, clefs_
     return beams
 
 
-def parse_beams(min_area_ratio: float = 0.07, min_tp_ratio: float = 0.4, min_width_ratio: float = 0.2) -> Tuple[ndarray, List[Tuple[Tuple[float, float], Tuple[float, float], float]], ndarray]:
+def parse_beams(
+        min_area_ratio: float = 0.07, 
+        min_tp_ratio: float = 0.4, 
+        min_width_ratio: float = 0.2) -> Tuple[
+            ndarray, 
+            List[Tuple[Tuple[float, float], Tuple[float, float], float]], 
+            ndarray]:
     # Fetch parameters
     symbols = layers.get_layer('symbols_pred')
     staff_pred = layers.get_layer('staff_pred')
@@ -150,10 +163,10 @@ def parse_beams(min_area_ratio: float = 0.07, min_tp_ratio: float = 0.4, min_wid
     valid_box = []
     valid_idxs = []
     idx_map = np.zeros_like(poly_map) - 1
-    for idx, rbox in enumerate(rboxes): # type: ignore
+    for idx, rbox in enumerate(rboxes):  # type: ignore
         # Used to find indexes of contour areas later. Must be check before
         # any 'continue' statement.
-        idx %= 255 # type: ignore
+        idx %= 255  # type: ignore
         if idx == 0:
             idx_map = np.zeros_like(poly_map) - 1
 
@@ -320,7 +333,7 @@ def refine_map_info(map_info: Dict[int, Dict[str, Any]]) -> Dict[int, Dict[str, 
     return new_map_info
 
 
-def get_stem_x(gbox: Tuple[int, int, int, int], nboxes: List[ndarray], unit_size: float64, is_right: bool = True) -> int:
+def get_stem_x(gbox: BBox, nboxes: List[ndarray], unit_size: float, is_right: bool = True) -> int:
     all_same_side = all(abs(nb[2]-gbox[2])<unit_size/3 for nb in nboxes)
     stem_at_center = not all_same_side
     if stem_at_center:
@@ -388,14 +401,14 @@ def scan_beam_flag(
         if c not in stat:
             stat[c] = 0
         stat[c] += 1
-    stat = sorted(stat.items(), key=lambda s: s[0], reverse=True) # type: ignore
+    stat = sorted(stat.items(), key=lambda s: s[0], reverse=True)  # type: ignore
 
     # At least there are such amount agreed with that there
     # are this number of beams/flags.
     accum = 0
     min_num = len(counter) * threshold
-    for c, num in stat: # type: ignore
-        accum += num # type: ignore
+    for c, num in stat:  # type: ignore
+        accum += num  # type: ignore
         if accum > min_num:
             return c
     return 0
@@ -542,8 +555,8 @@ def parse_rhythm(beam_map: ndarray, map_info: Dict[int, Dict[str, Any]], agree_t
         count = {k: 0 for k in set(labels)}
         for l in labels:
             count[l] += 1
-        count = sorted(count.items(), key=lambda c: c[1], reverse=True) # type: ignore
-        label = count[0][0] # type: ignore
+        count = sorted(count.items(), key=lambda c: c[1], reverse=True)  # type: ignore
+        label = count[0][0]  # type: ignore
         if label == NoteType.HALF_OR_WHOLE:
             # This group contians only half notes
             for nid in group.note_ids:
@@ -572,7 +585,7 @@ def parse_rhythm(beam_map: ndarray, map_info: Dict[int, Dict[str, Any]], agree_t
             end_y = gbox[3]
 
         # Calculate how many beams/flags are there.
-        count = scan_beam_flag( # type: ignore
+        count = scan_beam_flag(  # type: ignore
             bin_beam_map,
             max(reg_box[0], cen_x-half_scan_width),
             start_y,
@@ -588,7 +601,7 @@ def parse_rhythm(beam_map: ndarray, map_info: Dict[int, Dict[str, Any]], agree_t
         for nid in group.note_ids:
             if notes[nid].label is None:
                 if count < len(note_type_map):
-                    notes[nid].label = note_type_map[count] # type: ignore
+                    notes[nid].label = note_type_map[count]  # type: ignore
                 else:
                     notes[nid].invalid = True
 

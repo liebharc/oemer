@@ -1,18 +1,17 @@
+from typing import List, Tuple, Any, Union
 import enum
 
 import cv2
-import numpy as np
 import scipy.ndimage
+import numpy as np
+from numpy import ndarray
 
 from oemer import layers
 from oemer.constant import NoteHeadConstant as nhc
-from oemer.bbox import get_bbox, get_center, merge_nearby_bbox, rm_merge_overlap_bbox, to_rgb_img
+from oemer.bbox import BBox, get_bbox, get_center, merge_nearby_bbox, rm_merge_overlap_bbox, to_rgb_img
 from oemer.utils import get_unit_size, find_closest_staffs, get_global_unit_size
 from oemer.logging import get_logger
 from oemer.staffline_extraction import Staff
-from numpy import float64
-from numpy import ndarray
-from typing import List, Tuple, Any
 
 # Globals
 nn_img: ndarray
@@ -38,24 +37,24 @@ class NoteType(enum.Enum):
 class NoteHead:
     def __init__(self) -> None:
         self.points: list[tuple] = []
-        self.pitch: int | Any = None
+        self.pitch: Union[int, None] = None
         self.has_dot: bool = False
         self.bbox: list[float] | Any = None  # XYXY
-        self.stem_up: bool | Any = None
-        self.stem_right: bool | Any = None
-        self.track: int | Any = None
-        self.group: int | Any = None
-        self.staff_line_pos: int | Any = None
-        self.invalid: bool | Any = False  # May be false positive
-        self.id: int | Any = None
-        self.note_group_id: int | Any = None
+        self.stem_up: Union[bool, None] = None
+        self.stem_right: Union[bool, None] = None
+        self.track: Union[int, None] = None
+        self.group: Union[int, None] = None
+        self.staff_line_pos: int = None  # type: ignore
+        self.invalid: Union[bool, None] = False  # May be false positive
+        self.id: Union[int, None] = None
+        self.note_group_id: Union[int, None] = None
         self.sfn: Any = None  # See symbols_extraction.py
 
         # Protected attributes
-        self._label: NoteType | Any = None
+        self._label: Union[NoteType, None] = None
 
     @property
-    def label(self) -> NoteType | Any:
+    def label(self) -> Union[NoteType, None]:
         if self.invalid:
             logger.warning(f"Note {self.id} is not a valid note.")
             return None
@@ -98,7 +97,7 @@ class NoteHead:
             f")\n"
 
 
-def morph_notehead(pred: ndarray, unit_size: float64) -> ndarray:
+def morph_notehead(pred: ndarray, unit_size: float) -> ndarray:
     small_size = int(round(unit_size / 3))
     small_ker = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (small_size, small_size))
     pred = cv2.erode(cv2.dilate(pred.astype(np.uint8), small_ker), small_ker)
@@ -123,7 +122,7 @@ def adjust_bbox(bbox, noteheads):
     return (bbox[0], top, bbox[2], bottom)
 
 
-def check_bbox_size(bbox: Tuple[int, int, int, int], noteheads: ndarray, unit_size: float64) -> List[Tuple[int, int, int, int]]:
+def check_bbox_size(bbox: BBox, noteheads: ndarray, unit_size: float) -> List[BBox]:
     w = bbox[2] - bbox[0]
     h = bbox[3] - bbox[1]
     cen_x, _ = get_center(bbox)
@@ -169,13 +168,13 @@ def check_bbox_size(bbox: Tuple[int, int, int, int], noteheads: ndarray, unit_si
 
 
 def filter_notehead_bbox(
-    bboxes: List[Tuple[int, int, int, int]],
+    bboxes: List[BBox],
     notehead: ndarray,
     min_h_ratio: float = 0.4,
     max_h_ratio: int = 5,
     min_w_ratio: float = 0.3,
     max_w_ratio: int = 3,
-    min_area_ratio: float = 0.5) -> List[Tuple[int, int, int, int]]:
+    min_area_ratio: float = 0.5) -> List[BBox]:
 
     # Fetch parameters
     zones = layers.get_layer('zones')
@@ -216,12 +215,12 @@ def filter_notehead_bbox(
 
 def get_notehead_bbox(
     pred: ndarray,
-    global_unit_size: float64,
+    global_unit_size: float,
     min_h_ratio: float = 0.4,
     max_h_ratio: int = 5,
     min_w_ratio: float = 0.3,
     max_w_ratio: int = 3,
-    min_area_ratio: float = 0.6) -> List[Tuple[int, int, int, int]]:
+    min_area_ratio: float = 0.6) -> List[BBox]:
 
     logger.debug("Morph noteheads")
     note = morph_notehead(pred, unit_size=global_unit_size)
@@ -230,7 +229,7 @@ def get_notehead_bbox(
     result_bboxes: Any = []
     for box in bboxes:
         unit_size = get_unit_size(*get_center(box))
-        box = check_bbox_size(box, pred, unit_size) # type: ignore
+        box = check_bbox_size(box, pred, unit_size)  # type: ignore
         result_bboxes.extend(box)
     logger.debug("Detected noteheads: %d", len(result_bboxes))
 
@@ -273,8 +272,8 @@ def fill_hole(region: ndarray) -> ndarray:
             cand_x.append(cur)
             cur += 1
         if cur < w:
-            cand_y = np.array(cand_y) # type: ignore
-            cand_x = np.array(cand_x) # type: ignore
+            cand_y = np.array(cand_y)  # type: ignore
+            cand_x = np.array(cand_x)  # type: ignore
             tar[cand_y, cand_x] = 1
 
     # Scan by column
@@ -297,8 +296,8 @@ def fill_hole(region: ndarray) -> ndarray:
                 cand_x.append(xi)
                 cur += 1
             if cur < h:
-                cand_y = np.array(cand_y) # type: ignore
-                cand_x = np.array(cand_x) # type: ignore
+                cand_y = np.array(cand_y)  # type: ignore
+                cand_x = np.array(cand_x)  # type: ignore
                 tar[cand_y, cand_x] = 1
     return tar
 
@@ -357,7 +356,7 @@ def gen_notes(bboxes: List[ndarray], symbols: ndarray) -> List[NoteHead]:
         # Estimate position by the closeset center.
         pos_idx = np.argmin(np.abs(np.array(pos_cen)-cen_y))
         if 0 < pos_idx < len(pos_cen)-1:
-            nn.staff_line_pos = pos_idx
+            nn.staff_line_pos = int(pos_idx)
         elif pos_idx == 0:
             diff = abs(pos_cen[0] - cen_y)
             pos = round(diff / step)
@@ -381,7 +380,7 @@ def parse_stem_info(notes: List[NoteHead]) -> None:
 
     for note in notes:
         box = note.bbox
-        region = st_map[box[1]:box[3], box[0]:box[2]] # type: ignore
+        region = st_map[box[1]:box[3], box[0]:box[2]]  # type: ignore
         lls = set(np.unique(region))
         if 0 in lls:
             lls.remove(0)
@@ -393,7 +392,7 @@ def parse_stem_info(notes: List[NoteHead]) -> None:
         st_cen_x = np.mean(xi)
         cen_x = (box[0] + box[2]) / 2
         on_right = st_cen_x > cen_x
-        note.stem_right = on_right
+        note.stem_right = bool(on_right)
         # start_y = box[1] - offset
         # end_y = box[3] + offset
         # left_sum = np.sum(stems[start_y:end_y, box[0]-offset:box[2]])
@@ -461,8 +460,8 @@ def extract(
 
     # Assign notes with extracted infromation
     logger.info("Instanitiating notes")
-    solid_notes = gen_notes(solid_box, symbols) # type: ignore
-    hollow_notes = gen_notes(hollow_box, symbols) # type: ignore
+    solid_notes = gen_notes(solid_box, symbols)  # type: ignore
+    hollow_notes = gen_notes(hollow_box, symbols)  # type: ignore
 
     logger.debug("Setting temporary note type")
     for idx in range(len(hollow_notes)):

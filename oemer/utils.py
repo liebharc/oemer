@@ -1,3 +1,4 @@
+from typing import Tuple
 import os
 import logging
 
@@ -7,8 +8,6 @@ from sklearn.linear_model import LinearRegression
 
 from . import layers
 from oemer.staffline_extraction import Staff
-from typing import Tuple
-from numpy import float64
 
 def count(data, intervals):
     """Count elements in different intervals"""
@@ -22,7 +21,7 @@ def count(data, intervals):
     return occur
 
 
-def find_closest_staffs(x: int, y: int) -> Tuple[Staff, Staff]:  # -> Tuple([Staff, Staff]):
+def find_closest_staffs(x: int, y: int) -> Tuple[Staff, Staff]:
     staffs = layers.get_layer('staffs')
 
     staffs = staffs.reshape(-1, 1).squeeze()
@@ -54,14 +53,14 @@ def find_closest_staffs(x: int, y: int) -> Tuple[Staff, Staff]:  # -> Tuple([Sta
             return first, first
 
 
-def get_unit_size(x: int, y: int) -> float64:
+def get_unit_size(x: int, y: int) -> float:
     st1, st2 = find_closest_staffs(x, y)
     if st1.y_center == st2.y_center:
-        return float64(st1.unit_size)
+        return float(st1.unit_size)
 
     # Within the stafflines
     if st1.y_upper <= y <= st1.y_lower:
-        return float64(st1.unit_size)
+        return float(st1.unit_size)
 
     # Outside stafflines.
     # Infer the unit size by linear interpolation.
@@ -70,10 +69,10 @@ def get_unit_size(x: int, y: int) -> float64:
     w1 = dist1 / (dist1 + dist2)
     w2 = dist2 / (dist1 + dist2)
     unit_size = w1 * st1.unit_size + w2 * st2.unit_size
-    return float64(unit_size)
+    return float(unit_size)
 
 
-def get_global_unit_size() -> float64:
+def get_global_unit_size() -> float:
     staffs = layers.get_layer('staffs')
     usize = []
     for st in staffs.reshape(-1, 1).squeeze():
@@ -100,5 +99,5 @@ def estimate_degree(points, **kwargs):
     return slope_to_degree(model.coef_[0])
 
 
-def slope_to_degree(y_diff: int, x_diff: int) -> float64:
+def slope_to_degree(y_diff: int, x_diff: int) -> float:
     return np.rad2deg(np.arctan2(y_diff, x_diff))

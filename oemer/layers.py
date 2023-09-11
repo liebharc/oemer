@@ -1,6 +1,7 @@
+from typing import List
+
 import numpy as np
 from numpy import ndarray
-from typing import List
 
 
 # Dictionary of numpy.ndarray, representing all kinds of information

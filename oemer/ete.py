@@ -6,8 +6,8 @@ from pathlib import Path
 from PIL import Image
 from numpy import ndarray
 from typing import Tuple
-from argparse import Namespace
-from argparse import ArgumentParser
+
+from argparse import Namespace, ArgumentParser
 
 from oemer.region_of_interest import calculate_region_of_interest
 

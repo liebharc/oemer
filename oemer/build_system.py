@@ -1,13 +1,14 @@
 import re
 import math
 import enum
-from typing import List, Mapping
+import typing
 import xml.etree.ElementTree as ET
+from typing import List, Mapping, Union, Any, Optional, Tuple, Dict
 from xml.dom import minidom
 from xml.etree.ElementTree import Element, SubElement
 
 import numpy as np
-from typing import Union
+from numpy import ndarray
 
 from oemer import layers
 from oemer.symbol_extraction import Barline, Clef, Accidental, Rest, AccidentalType, ClefType, RestType
@@ -15,10 +16,6 @@ from oemer.note_group_extraction import NoteGroup
 from oemer.notehead_extraction import NoteHead, NoteType
 from oemer.utils import get_global_unit_size, get_total_track_nums
 from oemer.logging import get_logger
-from typing import Union, Any, Optional, Tuple, Dict
-import typing
-from numpy import float64
-from numpy import ndarray
 
 
 logger = get_logger(__name__)
@@ -73,17 +70,17 @@ class Key(enum.Enum):
 
 class Voice:
     def __init__(self) -> None:
-        self.id: int | Any = None
+        self.id: Union[int, None] = None
         self.note_ids: list[int] = []
-        self.stem_up: bool | Any = None
-        self.group_id: int | Any = None
-        self.x_center: float | Any = None
-        self.label: NoteType | Any = None
-        self.has_dot: bool | Any = None
-        self.group: int | Any = None
-        self.track: int | Any = None
-        self.duration: int | Any = None
-        self.rhythm_name: str | Any = None
+        self.stem_up: Union[bool, None] = None
+        self.group_id: Union[int, None] = None
+        self.x_center: Union[float, None] = None
+        self.label: NoteType = None  # type: ignore
+        self.has_dot: Union[bool, None] = None
+        self.group: Union[int, None] = None
+        self.track: Union[int, None] = None
+        self.duration: int = None  # type: ignore
+        self.rhythm_name: Union[str, None] = None
 
     def init(self) -> None:
         notes = layers.get_layer('notes')
@@ -93,8 +90,8 @@ class Voice:
         ll_count = {ll: 0 for ll in set(labels)}
         for ll in labels:
             ll_count[ll] += 1
-        ll_count = sorted(ll_count.items(), key=lambda it: it[1], reverse=True) # type: ignore
-        self.label = ll_count[0][0] # type: ignore
+        ll_count = sorted(ll_count.items(), key=lambda it: it[1], reverse=True)  # type: ignore
+        self.label = ll_count[0][0]  # type: ignore
 
         # Determine the dots
         dots = [notes[nid].has_dot for nid in self.note_ids]
@@ -108,10 +105,10 @@ class Voice:
                 notes[nid].force_set_label(self.label)
             notes[nid].has_dot = self.has_dot
 
-        self.rhythm_name = NOTE_TYPE_TO_RHYTHM[self.label]['name']
-        self.duration = NOTE_TYPE_TO_RHYTHM[self.label]['duration']
+        self.rhythm_name = NOTE_TYPE_TO_RHYTHM[self.label]['name']  # type: ignore
+        self.duration = NOTE_TYPE_TO_RHYTHM[self.label]['duration']  # type: ignore
         if self.has_dot:
-            self.duration = round(self.duration * 1.5) # type: ignore
+            self.duration = round(self.duration * 1.5)  # type: ignore
 
     def __repr__(self):
         return f"Voice {self.id}\n" \
@@ -122,26 +119,26 @@ class Voice:
 class Measure:
     def __init__(self) -> None:
         self.symbols: List[Any] = []  # List of symbols
-        self.double_barline: bool | Any = None
+        self.double_barline: Union[bool, None] = None
         self.has_clef: bool = False
         self.clefs: list[Clef] = []
         self.voices: list[NoteGroup] = []
         self.sfns: list[Accidental] = []
         self.rests: list[Rest] = []
-        self.number: int | Any = None
-        self.at_beginning: bool | Any = None
-        self.group: int | Any = None
-        self.key_override: Key | None = None
+        self.number: Union[int, None] = None
+        self.at_beginning: bool = None  # type: ignore
+        self.group: Union[int, None] = None
+        self.key_override: Union[Key, None] = None
 
         self.time_slots: list[object] = []
-        self.slot_duras: np.ndarray | Any = None
+        self.slot_duras: np.ndarray = None  # type: ignore
 
     def add_symbols(self, symbols: Union[List[Union[Clef, Rest, Accidental]], List[Voice]]) -> None:
         self.symbols.extend(symbols)
         self.symbols = sorted(self.symbols, key=lambda s: s.x_center)
         for sym in symbols:
             if isinstance(sym, Voice):
-                self.voices.append(sym) # type: ignore
+                self.voices.append(sym)  # type: ignore
             elif isinstance(sym, Clef):
                 self.clefs.append(sym)
                 self.has_clef = True
@@ -197,7 +194,7 @@ class Measure:
         # Count occurance
         sfn_counts = [0 for _ in range(track_nums)]
         for sfn in sfns_cands:
-            sfn_counts[sfn.track] += 1
+            sfn_counts[sfn.track] += 1  # type: ignore
 
         # Check validity
         all_same = all(ss.label==sfns_cands[0].label for ss in sfns_cands)  # All tracks have the same label.
@@ -214,18 +211,18 @@ class Measure:
             counter = {AccidentalType.FLAT: 0, AccidentalType.SHARP: 0, AccidentalType.NATURAL: 0}
             for sfn in sfns_cands:
                 counter[sfn.label] += 1
-            counter = sorted(counter.items(), key=lambda s: s[1], reverse=True) # type: ignore
-            if counter[0][0] == AccidentalType.NATURAL: # type: ignore
+            counter = sorted(counter.items(), key=lambda s: s[1], reverse=True)  # type: ignore
+            if counter[0][0] == AccidentalType.NATURAL:  # type: ignore
                 # Swap the first and second candidates when the first sfn type is natural.
-                counter[0], counter[1] = counter[1], counter[0] # type: ignore
+                counter[0], counter[1] = counter[1], counter[0]  # type: ignore
 
-            if counter[0][0] == AccidentalType.FLAT: # type: ignore
+            if counter[0][0] == AccidentalType.FLAT:  # type: ignore
                 # Flat and sharp/natural is assumed will not being confused by the model.
                 sfn_label = AccidentalType.FLAT
-            elif counter[0][0] == AccidentalType.SHARP: # type: ignore
-                if counter[1][0] == AccidentalType.FLAT: # type: ignore
+            elif counter[0][0] == AccidentalType.SHARP:  # type: ignore
+                if counter[1][0] == AccidentalType.FLAT:  # type: ignore
                     sfn_label = AccidentalType.SHARP
-                elif counter[0][1] > counter[1][1]: # type: ignore
+                elif counter[0][1] > counter[1][1]:  # type: ignore
                     # Sharp and natural are the most error-prone for prediction.
                     sfn_label = AccidentalType.SHARP
                 else:
@@ -259,7 +256,7 @@ class Measure:
                     new_clef.label = ClefType(track%2 + 1)
                     clefs.append(new_clef)
             return clefs
-        return [None for _ in range(track_nums)] # type: ignore
+        return [None for _ in range(track_nums)]  # type: ignore
 
     @typing.no_type_check
     def align_symbols(self) -> Optional[Any]:
@@ -398,9 +395,9 @@ class Measure:
         self.slot_duras = new_track_duras[:, :2]
         return time_slots, track_duras, new_track_duras
 
-    def get_time_slot_dura(self, x_center: float64) -> Tuple[int, ndarray]:
+    def get_time_slot_dura(self, x_center: float) -> Tuple[int, ndarray]:
         for idx, slot in enumerate(self.time_slots[:-1]):
-            if slot[0].x_center <= x_center < self.time_slots[idx+1][0].x_center: # type: ignore
+            if slot[0].x_center <= x_center < self.time_slots[idx+1][0].x_center:  # type: ignore
                 return idx, self.slot_duras[idx]
         return len(self.time_slots)-1, self.slot_duras[-1]
 
@@ -414,7 +411,7 @@ class Action:
     class Context:
         key: Union[Key, None] = None
         clefs: List[Clef] = []
-        sfn_state: Mapping[str, Accidental] = {chr(ord('A')+i):None for i in range(7)} # type: ignore
+        sfn_state: Mapping[str, Accidental] = {chr(ord('A')+i):None for i in range(7)}  # type: ignore
 
     ctx = Context()
 
@@ -439,7 +436,7 @@ class Action:
     def clear(cls) -> None:
         cls.ctx.key = None
         cls.ctx.clefs = []
-        cls.ctx.sfn_state = {chr(ord('A')+i):None for i in range(7)} # type: ignore
+        cls.ctx.sfn_state = {chr(ord('A')+i):None for i in range(7)}  # type: ignore
 
 
 class KeyChange(Action):
@@ -477,11 +474,11 @@ class AddNote(Action):
         self.voice = voice
 
     def perform(self, parent_elem: Optional[Element] = None) -> Element:
-        clef_type = self.ctx.clefs[self.note.track].label
+        clef_type = self.ctx.clefs[self.note.track].label  # type: ignore
         chroma = get_chroma_pitch(self.note.staff_line_pos, clef_type)
         cur_sfn = self.ctx.sfn_state[chroma]
         if (self.note.sfn is not None) and (cur_sfn != self.note.sfn):
-            self.ctx.sfn_state[chroma] = self.note.sfn # type: ignore
+            self.ctx.sfn_state[chroma] = self.note.sfn  # type: ignore
         else:
             self.note.sfn = cur_sfn
         elem = decode_note(self.note, clef_type, self.chord, self.voice)
@@ -579,7 +576,7 @@ class MusicXMLBuilder:
         self.measures: dict[int, list[Measure]] = {}
         self.actions: list[Action] = []
         self.assume_simple = assume_simple
-        self.title: str = title # type: ignore
+        self.title: str = title  # type: ignore
 
     def build(self) -> None:
         # Fetch parameters
@@ -686,7 +683,7 @@ class MusicXMLBuilder:
         num = 1  # Measure count starts from 1 for MusicXML
         for grp, insts in group_container.items():
             self.measures[grp] = []
-            buffer: Any = []
+            buffer: List[Any] = []
             at_beginning = True
             double_barline = False
             for inst in insts:
@@ -756,7 +753,13 @@ class MusicXMLBuilder:
         return mxl_str
 
 
-def gen_measure(buffer: Union[List[Union[Clef, Rest, Accidental]], List[Voice]], grp: int, num: int, at_beginning: bool = False, double_barline: bool = False) -> Measure:
+def gen_measure(
+        buffer: Union[List[Union[Clef, Rest, Accidental]], 
+                      List[Voice]], 
+                      grp: int, 
+                      num: int, 
+                      at_beginning: bool = False, 
+                      double_barline: bool = False) -> Measure:
     mm = Measure()
     mm.add_symbols(buffer)
     mm.double_barline = double_barline
@@ -926,7 +929,7 @@ def gen_measures(group_container):
 
 def decode_note(note, clef_type, is_chord=False, voice=1) -> Element:
     if note.invalid:
-        return None # type: ignore
+        return None  # type: ignore
 
     # Element order matters!!
     elem = Element('note')
@@ -965,13 +968,13 @@ def decode_note(note, clef_type, is_chord=False, voice=1) -> Element:
     if (int(octave.text) < 0 or int(octave.text) > 8) \
             or (int(octave.text) == 0 and step.text != "A") \
             or (int(octave.text) == 8 and step.text != "C"):
-        return None # type: ignore
+        return None  # type: ignore
 
     # Rhythm type
     dura = SubElement(elem, 'duration')
     dura.text = str(NOTE_TYPE_TO_RHYTHM[note.label]['duration'])
     rhy = SubElement(elem, 'type')
-    rhy.text = NOTE_TYPE_TO_RHYTHM[note.label]['name'] # type: ignore
+    rhy.text = NOTE_TYPE_TO_RHYTHM[note.label]['name']  # type: ignore
 
     # Dot
     if note.has_dot:

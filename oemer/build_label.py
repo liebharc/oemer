@@ -107,6 +107,6 @@ if __name__ == "__main__":
     #out = build_label(path)
 
     color = 45
-    arr = find_example(color) # type: ignore
+    arr = find_example(color)  # type: ignore
     arr = np.where(arr==200, color, arr)
     out = fill_hole(arr, color)

@@ -1,15 +1,15 @@
 
+from typing import Union, Any, List, Tuple
+
 import cv2
 import numpy as np
-from sklearn.cluster import AgglomerativeClustering
 from numpy import ndarray
-from typing import List
-from typing import Tuple
-from typing import Union, Any
-from numpy import float64
+from sklearn.cluster import AgglomerativeClustering
 
 
-def get_bbox(data: ndarray) -> List[Tuple[int, int, int, int]]:
+BBox = Tuple[int, int, int, int]
+
+def get_bbox(data: ndarray) -> List[BBox]:
     contours, _ = cv2.findContours(data.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     bboxes = []
     for cnt in contours:
@@ -19,7 +19,7 @@ def get_bbox(data: ndarray) -> List[Tuple[int, int, int, int]]:
     return bboxes
 
 
-def get_center(bbox: Union[Tuple[int, int, int, int], ndarray]) -> Tuple[int, int]:
+def get_center(bbox: Union[BBox, ndarray]) -> Tuple[int, int]:
     cen_y = int(round((bbox[1] + bbox[3]) / 2))
     cen_x = int(round((bbox[0] + bbox[2]) / 2))
     return cen_x, cen_y
@@ -33,7 +33,7 @@ def get_edge(data):
     return data
 
 
-def merge_nearby_bbox(bboxes: List[Tuple[int, int, int, int]], distance: float64, x_factor: int = 1, y_factor: int = 1) -> List[Tuple[int, int, int, int]]:
+def merge_nearby_bbox(bboxes: List[BBox], distance: float, x_factor: int = 1, y_factor: int = 1) -> List[BBox]:
     model = AgglomerativeClustering(n_clusters=None, distance_threshold=distance, compute_full_tree=True)
     centers = np.array([(bb[0]+bb[2], bb[1]+bb[3]) for bb in bboxes]) / 2
     centers[:, 0] *= x_factor  # Increase/decrease the x distance
@@ -52,7 +52,10 @@ def merge_nearby_bbox(bboxes: List[Tuple[int, int, int, int]], distance: float64
     return new_box
 
 
-def rm_merge_overlap_bbox(bboxes: List[Tuple[int, int, int, int]], mode: str = 'remove', overlap_ratio: float = 0.5) -> Union[List[Tuple[int, int, int, int]], List[Tuple[int, int, int, int]], List[Tuple[int, int, int, int]]]:
+def rm_merge_overlap_bbox(
+        bboxes: List[BBox], 
+        mode: str = 'remove', 
+        overlap_ratio: float = 0.5) -> Union[List[BBox], List[BBox], List[BBox]]:
     assert mode in ['remove', 'merge'], mode
 
     pts = np.array([(box[2], box[3]) for box in bboxes])
@@ -108,7 +111,8 @@ def rm_merge_overlap_bbox(bboxes: List[Tuple[int, int, int, int]], mode: str = '
     valid_box = [info['bbox'] for info in records.values()]
     return valid_box
 
-def remove_overlapping_bbox(bboxes: List[Tuple[int, int, int, int]], forbidden_areas: List[Tuple[int, int, int, int]], overlap_ratio: float = 0.5) -> List[Tuple[int, int, int, int]]:
+
+def remove_overlapping_bbox(bboxes: List[BBox], forbidden_areas: List[BBox], overlap_ratio: float = 0.5) -> List[BBox]:
     result = []
     for bbox in bboxes:
         overlap = False
@@ -120,7 +124,7 @@ def remove_overlapping_bbox(bboxes: List[Tuple[int, int, int, int]], forbidden_a
             result.append(bbox)
     return result
     
-def find_lines(data: ndarray, min_len: int = 10, max_gap: int = 20) -> List[Tuple[int, int, int, int]]:
+def find_lines(data: ndarray, min_len: int = 10, max_gap: int = 20) -> List[BBox]:
     assert len(data.shape) == 2, f"{type(data)} {data.shape}"
 
     lines = cv2.HoughLinesP(data.astype(np.uint8), 1, np.pi/180, 50, None, min_len, max_gap)
@@ -150,7 +154,12 @@ def to_rgb_img(data: ndarray) -> ndarray:
     return img
 
 
-def draw_bounding_boxes(bboxes: List[Tuple[int, int, int, int]], img: ndarray, color: Tuple[int, int, int] = (0, 255, 0), width: int = 2, inplace: bool = False) -> ndarray:
+def draw_bounding_boxes(
+        bboxes: List[BBox], 
+        img: ndarray, 
+        color: Tuple[int, int, int] = (0, 255, 0), 
+        width: int = 2, 
+        inplace: bool = False) -> ndarray:
     if len(img.shape) < 3:
         img = to_rgb_img(img)
     if not inplace:
