@@ -160,7 +160,7 @@ def filter_barlines(lines: List[BBox], min_height_unit_ratio: float = 3.75) -> n
 
         # Check slope. Degree should be within 80~100.
         deg = slope_to_degree(y2-y1, x2-x1)
-        if abs(deg) < 75:
+        if abs(deg) < 60:
             continue
 
         unit_sizes.append(unit_size)
@@ -254,7 +254,7 @@ def filter_clef_box(bboxes: List[BBox]) -> List[BBox]:
 def parse_clefs_keys(
         clefs_keys: ndarray, 
         unit_size: float, 
-        clef_size_ratio: float = 3.5, 
+        clef_size_ratio: float = 5, 
         max_clef_tp_ratio: float = 0.45) -> Tuple[List[BBox], List[BBox], List[str], List[str]]:
     global cs_img
     cs_img = to_rgb_img(clefs_keys)  # type: ignore
@@ -447,7 +447,7 @@ def gen_rests(bboxes: List[BBox], labels: List[str]) -> List[Rest]:
     return rests
 
 
-def extract(min_barline_h_unit_ratio: float = 3.75) -> Tuple[List[Barline], List[Clef], List[Sfn], List[Rest]]:
+def extract(min_barline_h_unit_ratio: float = 3) -> Tuple[List[Barline], List[Clef], List[Sfn], List[Rest]]:
     # Fetch paramters
     symbols = layers.get_layer('symbols_pred')
     stems_rests = layers.get_layer('stems_rests_pred')
