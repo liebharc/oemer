@@ -338,6 +338,7 @@ def extract(
             all_staffs.append(staffs)
             print(len(staffs))
     all_staffs = align_staffs(all_staffs)  # type: ignore
+    all_staffs = align_every_row(all_staffs)  # type: ignore
 
     # Use barline information to infer the number of tracks for each group.
     num_track = further_infer_track_nums(all_staffs, min_degree=barline_min_degree)  # type: ignore
@@ -505,6 +506,34 @@ def filter_line_peaks(peaks: ndarray, norm: ndarray, max_gap_ratio: float = 1.5)
         count = 1
     return valid_peaks, groups[:-1]
 
+def align_row(row: List[Staff]):
+    average_y_upper = np.mean([st.y_upper for st in row])
+    average_y_lower = np.mean([st.y_lower for st in row])
+    threshold = 5
+    valid_staffs = []
+    invalid_staffs = []
+    for st in row:
+        if np.abs(st.y_upper - average_y_upper) > threshold or np.abs(st.y_lower - average_y_lower) > threshold:
+            invalid_staffs.append(st)
+        else:
+            valid_staffs.append(st)
+
+    average_y_lower = np.mean([st.y_lower for st in valid_staffs])
+    average_y_center = np.mean([st.y_center for st in valid_staffs])
+    average_y_upper = np.mean([st.y_upper for st in valid_staffs])
+
+    for st in invalid_staffs:
+        st.y_lower = average_y_lower
+        st.y_upper = average_y_upper
+        st.y_center = average_y_center
+    return row
+
+def align_every_row(staffs: List[List[Staff]]):
+    number_of_rows = min(len(st_part) for st_part in staffs)
+    for i in range(number_of_rows):
+        row = [staff[i] for staff in staffs]
+        align_row(row)
+    return staffs
 
 def align_staffs(staffs: List[List[Staff]], max_dist_ratio: int = 3) -> ndarray:
     len_types = set(len(st_part) for st_part in staffs)
