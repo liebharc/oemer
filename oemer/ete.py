@@ -242,7 +242,7 @@ def extract(args: Namespace) -> str:
     # ---- Build MusicXML ---- #
     logger.info("Building MusicXML document")
     basename = os.path.basename(img_path).replace(".jpg", "").replace(".png", "")
-    builder = MusicXMLBuilder(title=basename.capitalize())
+    builder = MusicXMLBuilder(title=basename.capitalize(), assume_simple=args.assume_simple)
     builder.build()
     xml = builder.to_musicxml()
 
@@ -280,6 +280,11 @@ def get_parser() -> ArgumentParser:
     parser.add_argument(
         "--debug",
         help="Enable debug mode. The debug images will be saved to the current directory.",
+        action='store_true'
+    )
+    parser.add_argument(
+        "--assume-simple",
+        help="Instruct the detection to assume simple sheet music. This increases the robustness. Assumptions are:\n- only one key",
         action='store_true'
     )
     parser.add_argument(

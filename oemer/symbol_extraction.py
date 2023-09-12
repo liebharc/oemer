@@ -16,6 +16,7 @@ from oemer.general_filtering_rules import filter_out_of_range_bbox, filter_out_s
 from oemer.bbox import (
     BBox,
     merge_nearby_bbox,
+    remove_overlapping_bbox,
     rm_merge_overlap_bbox,
     find_lines,
     draw_lines,
@@ -152,6 +153,7 @@ def filter_barlines(lines: List[BBox], min_height_unit_ratio: float = 3.75) -> n
 
     # First round check, with line mode.
     valid_lines = []
+    unit_sizes = []
     for line in lines:
         x1, y1, x2, y2 = line
         unit_size = get_unit_size(*get_center(line))
@@ -161,7 +163,9 @@ def filter_barlines(lines: List[BBox], min_height_unit_ratio: float = 3.75) -> n
         if abs(deg) < 75:
             continue
 
+        unit_sizes.append(unit_size)
         valid_lines.append(line)
+    unit_size = np.mean(unit_sizes)
 
     # Second round check, in bbox mode.
     valid_lines = np.array(valid_lines)  # type: ignore
@@ -297,7 +301,7 @@ def parse_clefs_keys(
     return clef_box, key_box, clef_label, key_label
 
 
-def parse_rests(line_box: ndarray, unit_size: float) -> Tuple[List[BBox], List[str]]:
+def parse_rests(line_box: ndarray, unit_size: float, barlines: List[BBox]) -> Tuple[List[BBox], List[str]]:
     stems_rests = layers.get_layer('stems_rests_pred')
     group_map = layers.get_layer('group_map')
 
@@ -318,6 +322,7 @@ def parse_rests(line_box: ndarray, unit_size: float) -> Tuple[List[BBox], List[s
     bboxes = merge_nearby_bbox(bboxes, unit_size*1.2)
     bboxes = rm_merge_overlap_bbox(bboxes)
     bboxes = filter_out_small_area(bboxes, area_size_func=lambda usize: usize**2 * 0.7)
+    bboxes = remove_overlapping_bbox(bboxes, barlines)
     temp = draw_bounding_boxes(bboxes, temp)
 
     label = []
@@ -399,11 +404,14 @@ def gen_sfns(bboxes: List[BBox], labels: List[str]) -> List[Sfn]:
         if ss.note_id is not None:
             note = notes[ss.note_id]
             if ss.track != note.track:
-                raise E.SfnNoteTrackMismatch(f"Track of sfn and note not mismatch: {ss}\n{note}")
-            if ss.group != note.group:
-                raise E.SfnNoteGroupMismatch(f"Group of sfn and note not mismatch: {ss}\n{note}")
-            notes[ss.note_id].sfn = ss.label
-            ss.is_key = False
+                print(f"Track of sfn and note not mismatch: {ss}\n{note}")
+                notes[ss.note_id].invalid = True
+            elif ss.group != note.group:
+                print(f"Group of sfn and note not mismatch: {ss}\n{note}")
+                notes[ss.note_id].invalid = True
+            else:
+                notes[ss.note_id].sfn = ss.label
+                ss.is_key = False
 
         sfns.append(ss)
     return sfns
@@ -430,7 +438,7 @@ def gen_rests(bboxes: List[BBox], labels: List[str]) -> List[Rest]:
         rr.group = st1.group
 
         unit_size = int(round(get_unit_size(*get_center(box))))
-        dot_range = range(box[2]+1, box[2]+unit_size)
+        dot_range = range(box[2]+1, min(box[2]+unit_size, symbols.shape[1] - 1))
         dot_region = symbols[box[1]:box[3], dot_range]
         if 0 < np.sum(dot_region) < unit_size**2 / 7:
             rr.has_dot = True
@@ -454,7 +462,7 @@ def extract(min_barline_h_unit_ratio: float = 3.75) -> Tuple[List[Barline], List
     clefs = gen_clefs(clef_box, clef_label)
     sfns = gen_sfns(key_box, key_label)
 
-    rest_box, rest_label = parse_rests(line_box, unit_size)
+    rest_box, rest_label = parse_rests(line_box, unit_size, [c.bbox for c in barlines])
     rests = gen_rests(rest_box, rest_label)
 
     return barlines, clefs, sfns, rests
