@@ -9,6 +9,8 @@ from typing import Tuple
 
 from argparse import Namespace, ArgumentParser
 
+from oemer.region_of_interest import calculate_region_of_interest
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 import cv2
@@ -177,6 +179,13 @@ def extract(args: Namespace) -> str:
     # Register predictions
     symbols = symbols + clefs_keys + stems_rests
     symbols[symbols>1] = 1
+    roi = calculate_region_of_interest([notehead, staff, clefs_keys])
+    stems_rests = cv2.bitwise_and(stems_rests, stems_rests, mask = roi)
+    clefs_keys = cv2.bitwise_and(clefs_keys, clefs_keys, mask = roi)
+    notehead = cv2.bitwise_and(notehead, notehead, mask = roi)
+    symbols = cv2.bitwise_and(symbols, symbols, mask = roi)
+    staff = cv2.bitwise_and(staff, staff, mask = roi)
+    layers.register_layer("roi", roi)
     layers.register_layer("stems_rests_pred", stems_rests)
     layers.register_layer("clefs_keys_pred", clefs_keys)
     layers.register_layer("notehead_pred", notehead)
@@ -190,6 +199,7 @@ def extract(args: Namespace) -> str:
     debug_show(f_name, 1.0, 'symbols', symbols, scale=True)
     debug_show(f_name, 1.0, 'stems_rests', stems_rests, scale=True)
     debug_show(f_name, 1.0, 'clefs_keys', clefs_keys, scale=True)
+    debug_show(f_name, 1.0, 'roi', roi, scale=True)
 
     # ---- Extract staff lines and group informations ---- #
     logger.info("Extracting stafflines")
@@ -306,9 +316,6 @@ def main() -> None:
             raise ValueError("Please specify the image path.")
         if not os.path.exists(args.img_path):
             raise FileNotFoundError(f"The given image path doesn't exists: {args.img_path}")
-
-    if not os.path.exists(args.img_path):
-        raise FileNotFoundError(f"The given image path doesn't exists: {args.img_path}")
 
     # Check there are checkpoints
     chk_path = os.path.join(MODULE_PATH, "checkpoints/unet_big/model.onnx")
