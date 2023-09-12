@@ -16,7 +16,7 @@ def calculate_region_of_interest(detected_layers: list[np.ndarray]) -> np.ndarra
     staff_and_notehead_eroded = cv2.erode(staff_and_notehead_diliated, erosion_element)
 
     dilatation_size = erosion_size + 5
-    dilatation_element = cv2.getStructuringElement(dilation_shape, (20, 2 * dilatation_size + 1))
+    dilatation_element = cv2.getStructuringElement(dilation_shape, (20, 4 * dilatation_size + 1))
     
     region_of_interest = cv2.dilate(staff_and_notehead_eroded, dilatation_element)
     region_of_interest = cv2.threshold(region_of_interest, 0.1, 1, cv2.THRESH_BINARY)[1]
