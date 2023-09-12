@@ -128,6 +128,7 @@ class Measure:
         self.number: Union[int, None] = None
         self.at_beginning: bool = None  # type: ignore
         self.group: Union[int, None] = None
+        self.key_override: Union[Key, None] = None
 
         self.time_slots: list[List[Any]] = []
         self.slot_duras: np.ndarray = None  # type: ignore
@@ -153,12 +154,19 @@ class Measure:
         self.rests = sorted(self.rests, key=lambda s: s.x_center)
 
     def has_key(self) -> bool:
+        if self.key_override is not None:
+            return True
         total_tracks = get_total_track_nums()
         start_idx = total_tracks if self.at_beginning else 0
         syms =  self.symbols[start_idx:start_idx+total_tracks]
         return all(isinstance(sym, Sfn) for sym in syms)
+    
+    def set_key_override(self, key: Key) -> None:
+        self.key_override = key
 
     def get_key(self) -> Key:
+        if self.key_override is not None:
+            return self.key_override
         if len(self.sfns) == 0:
             return Key(0)
 
@@ -195,6 +203,8 @@ class Measure:
         if not all_equal:
             logger.warning("The number of key symbols are not all the same for every track!")
 
+        if len(sfns_cands) == 0:
+            return Key(0)
         sfn_label = sfns_cands[0].label
         if not all_same:
             # Count the most occurance.
@@ -560,9 +570,10 @@ class AddInit(Action):
 
 
 class MusicXMLBuilder:
-    def __init__(self, title: Optional[str] = None) -> None:
+    def __init__(self, assume_simple: bool = False, title: Optional[str] = None) -> None:
         self.measures: dict[int, list[Measure]] = {}
         self.actions: list[Action] = []
+        self.assume_simple = assume_simple
         self.title: str = title  # type: ignore
 
     def build(self) -> None:
@@ -572,6 +583,8 @@ class MusicXMLBuilder:
         voices = get_voices()
         group_container = sort_symbols(voices)
         self.gen_measures(group_container)
+        if self.assume_simple:
+            self.pick_dominant_key()
 
         Action.clear()
         first_measure = self.measures[0][0]
@@ -691,6 +704,20 @@ class MusicXMLBuilder:
                 # Clear out buffer
                 mm = gen_measure(buffer, grp, num, at_beginning, double_barline)
                 self.measures[grp].append(mm)
+
+    def pick_dominant_key(self) -> None:
+        keys = []
+        for _, measures in self.measures.items():
+            keys.extend([measure.get_key() for measure in measures if measure.has_key()])
+
+        if len(keys) == 0:
+            return
+
+        dominant_key = max(keys, key=keys.count)
+        for _, measures in self.measures.items():
+            for measure in measures:
+                if measure.has_key():
+                    measure.set_key_override(dominant_key)
 
     def to_musicxml(self, tempo: int = 90) -> bytes:
         score = Element('score-partwise', attrib={'version': '4.0'})
