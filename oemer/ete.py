@@ -253,7 +253,7 @@ def get_parser() -> ArgumentParser:
         "Oemer",
         description="End-to-end OMR command line tool. Receives an image as input, and outputs MusicXML file.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("img_path", help="Path to the image.", type=str)
+    parser.add_argument("img_path", help="Path to the image.", type=str, nargs='?')
     parser.add_argument(
         "-o", "--output-path", help="Path to output the result file.", type=str, default="./")
     parser.add_argument(
@@ -272,6 +272,10 @@ def get_parser() -> ArgumentParser:
         help="Enable debug mode. The debug images will be saved to the current directory.",
         action='store_true'
     )
+    parser.add_argument(
+        "--just-download-model",
+        help="Just downloads the models and exits afterwards. Other arguments will be ignored.",
+        action='store_true')
     return parser
 
 
@@ -297,6 +301,12 @@ def main() -> None:
     if args.debug:
         set_debug_level(1)
 
+    if not args.just_download_model:
+        if not args.img_path:
+            raise ValueError("Please specify the image path.")
+        if not os.path.exists(args.img_path):
+            raise FileNotFoundError(f"The given image path doesn't exists: {args.img_path}")
+
     if not os.path.exists(args.img_path):
         raise FileNotFoundError(f"The given image path doesn't exists: {args.img_path}")
 
@@ -310,6 +320,10 @@ def main() -> None:
             save_dir = os.path.join(MODULE_PATH, "checkpoints", save_dir)
             save_path = os.path.join(save_dir, title.split("_")[1])
             download_file(title, url, save_path)
+
+    if args.just_download_model:
+        logger.info("Downloaded model, exiting now as --just-download-model is set.")
+        return
 
     clear_data()
     mxl_path = extract(args)
