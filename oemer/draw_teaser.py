@@ -50,7 +50,6 @@ def draw_notes() -> Image.Image:
     ori_img = layers.get_layer('original_image')
     staffs = layers.get_layer('staffs')
     notes = layers.get_layer('notes')
-    roi = layers.get_layer('roi')
 
     global out
     out = np.copy(ori_img).astype(np.uint8)

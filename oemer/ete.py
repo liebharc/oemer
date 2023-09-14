@@ -185,7 +185,6 @@ def extract(args: Namespace) -> str:
     notehead = cv2.bitwise_and(notehead, notehead, mask = roi)
     symbols = cv2.bitwise_and(symbols, symbols, mask = roi)
     staff = cv2.bitwise_and(staff, staff, mask = roi)
-    layers.register_layer("roi", roi)
     layers.register_layer("stems_rests_pred", stems_rests)
     layers.register_layer("clefs_keys_pred", clefs_keys)
     layers.register_layer("notehead_pred", notehead)
