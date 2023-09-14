@@ -17,7 +17,7 @@ import numpy as np
 from oemer import MODULE_PATH
 from oemer import layers
 from oemer.inference import inference
-from oemer.logger import get_logger
+from oemer.logger import DEBUG_LEVEL, DEBUG_OUTPUT, WINDOW_NAME, debug_show, get_logger, set_debug_level
 from oemer.dewarp import estimate_coords, dewarp
 from oemer.staffline_extraction import extract as staff_extract
 from oemer.notehead_extraction import extract as note_extract
@@ -25,7 +25,7 @@ from oemer.note_group_extraction import extract as group_extract
 from oemer.symbol_extraction import extract as symbol_extract
 from oemer.rhythm_extraction import extract as rhythm_extract
 from oemer.build_system import MusicXMLBuilder
-from oemer.draw_teaser import teaser
+from oemer.draw_teaser import draw_notes, draw_before_rhythm, draw_staff_and_zones, teaser
 
 
 logger = get_logger(__name__)
@@ -117,6 +117,7 @@ def extract(args: Namespace) -> str:
     pkl_path = img_path.parent / f"{f_name}.pkl"
     if pkl_path.exists():
         # Load from cache
+        logger.info("Loading from cache")
         pred = pickle.load(open(pkl_path, "rb"))
         notehead = pred["note"]
         symbols = pred["symbols"]
@@ -144,17 +145,34 @@ def extract(args: Namespace) -> str:
     # Load the original image, resize to the same size as prediction.
     image = cv2.imread(str(img_path))
     image = cv2.resize(image, (staff.shape[1], staff.shape[0]))
+    debug_show(f_name, 0.0, 'original', image)
+    debug_show(f_name, 0.0, 'staff', staff, scale=True)
+    debug_show(f_name, 0.0, 'notehead', notehead, scale=True)
+    debug_show(f_name, 0.0, 'symbols', symbols, scale=True)
+    debug_show(f_name, 0.0, 'stems_rests', stems_rests, scale=True)
+    debug_show(f_name, 0.0, 'clefs_keys', clefs_keys, scale=True)
 
     if not args.without_deskew:
-        logger.info("Dewarping")
-        coords_x, coords_y = estimate_coords(staff)
-        staff = dewarp(staff, coords_x, coords_y)
-        symbols = dewarp(symbols, coords_x, coords_y)
-        stems_rests = dewarp(stems_rests, coords_x, coords_y)
-        clefs_keys = dewarp(clefs_keys, coords_x, coords_y)
-        notehead = dewarp(notehead, coords_x, coords_y)
-        for i in range(image.shape[2]):
-            image[..., i] = dewarp(image[..., i], coords_x, coords_y)
+        try:
+            logger.info("Dewarping")
+            coords_x, coords_y = estimate_coords(staff)
+            staff_dewarped = dewarp(staff, coords_x, coords_y)
+            symbols_dewarped = dewarp(symbols, coords_x, coords_y)
+            stems_rests_dewarped = dewarp(stems_rests, coords_x, coords_y)
+            clefs_keys_dewarped = dewarp(clefs_keys, coords_x, coords_y)
+            notehead_dewarped = dewarp(notehead, coords_x, coords_y)
+            image_dewarped = image.copy()
+            for i in range(image.shape[2]):
+                image_dewarped[..., i] = dewarp(image[..., i], coords_x, coords_y)
+            logger.info("Dewarping done")
+            staff = staff_dewarped
+            symbols = symbols_dewarped
+            stems_rests = stems_rests_dewarped
+            clefs_keys = clefs_keys_dewarped
+            notehead = notehead_dewarped
+            image = image_dewarped
+        except Exception as e:
+            logger.error("Dewarping failed, skipping.")
 
     # Register predictions
     symbols = symbols + clefs_keys + stems_rests
@@ -165,12 +183,20 @@ def extract(args: Namespace) -> str:
     layers.register_layer("symbols_pred", symbols)
     layers.register_layer("staff_pred", staff)
     layers.register_layer("original_image", image)
+    
+    debug_show(f_name, 1.0, 'original', image)
+    debug_show(f_name, 1.0, 'staff', staff, scale=True)
+    debug_show(f_name, 1.0, 'notehead', notehead, scale=True)
+    debug_show(f_name, 1.0, 'symbols', symbols, scale=True)
+    debug_show(f_name, 1.0, 'stems_rests', stems_rests, scale=True)
+    debug_show(f_name, 1.0, 'clefs_keys', clefs_keys, scale=True)
 
     # ---- Extract staff lines and group informations ---- #
     logger.info("Extracting stafflines")
     staffs, zones = staff_extract()
     layers.register_layer("staffs", staffs)  # Array of 'Staff' instances
     layers.register_layer("zones", zones)  # Range of each zones, array of 'range' object.
+    debug_show(f_name, 2.0, 'staffs', draw_staff_and_zones())
 
     # ---- Extract noteheads ---- #
     logger.info("Extracting noteheads")
@@ -178,6 +204,7 @@ def extract(args: Namespace) -> str:
 
     # Array of 'NoteHead' instances.
     layers.register_layer('notes', np.array(notes))
+    debug_show(f_name, 2.0, 'notes', draw_notes())
 
     # Add a new layer (w * h), indicating note id of each pixel.
     layers.register_layer('note_id', np.zeros(symbols.shape, dtype=np.int64)-1)
@@ -196,6 +223,7 @@ def extract(args: Namespace) -> str:
     layers.register_layer('clefs', np.array(clefs))
     layers.register_layer('sfns', np.array(sfns))
     layers.register_layer('rests', np.array(rests))
+    debug_show(f_name, 2.0, 'before_rhythm', draw_before_rhythm())
 
     # ---- Parse rhythm ---- #
     logger.info("Extracting rhythm types")
@@ -239,6 +267,11 @@ def get_parser() -> ArgumentParser:
         "--without-deskew",
         help="Disable the deskewing step if you are sure the image has no skew.",
         action='store_true')
+    parser.add_argument(
+        "--debug",
+        help="Enable debug mode. The debug images will be saved to the current directory.",
+        action='store_true'
+    )
     return parser
 
 
@@ -261,6 +294,8 @@ def download_file(title: str, url: str, save_path: str) -> None:
 def main() -> None:
     parser = get_parser()
     args = parser.parse_args()
+    if args.debug:
+        set_debug_level(1)
 
     if not os.path.exists(args.img_path):
         raise FileNotFoundError(f"The given image path doesn't exists: {args.img_path}")
@@ -283,4 +318,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    if DEBUG_LEVEL > 0 and DEBUG_OUTPUT != 'file':
+        cv2.namedWindow(WINDOW_NAME)
     main()

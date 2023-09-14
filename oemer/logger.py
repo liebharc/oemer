@@ -1,6 +1,15 @@
 import os
 import logging
+import cv2
+import numpy as np
 
+DEBUG_LEVEL = 0          # 0=none, 1=some, 2=lots, 3=all
+DEBUG_OUTPUT = 'file'    # file, screen, both
+WINDOW_NAME = 'oemer'   # Window name for visualization
+
+def set_debug_level(level):
+    global DEBUG_LEVEL
+    DEBUG_LEVEL = level
 
 def get_logger(name, level="warn"):
     """Get the logger for printing informations.
@@ -47,3 +56,34 @@ def get_logger(name, level="warn"):
     logger.addHandler(handler)
     logger.setLevel(level_mapping[level.lower()])
     return logger
+
+def debug_show(name, step, text, display, scale: bool = False):
+    if DEBUG_LEVEL == 0:
+        return
+    
+    image = display.copy()
+    if scale:
+        max = np.max(image)
+        image = image * 255 / max
+
+    if DEBUG_OUTPUT != 'screen':
+        filetext = text.replace(' ', '_')
+        outfile = name + '_debug_' + str(step) + '_' + filetext + '.png'
+        cv2.imwrite(outfile, image)
+
+    if DEBUG_OUTPUT != 'file':
+
+        height = image.shape[0]
+
+        cv2.putText(image, text, (16, height-16),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1.0,
+                    (0, 0, 0), 3, cv2.LINE_AA)
+
+        cv2.putText(image, text, (16, height-16),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1.0,
+                    (255, 255, 255), 1, cv2.LINE_AA)
+
+        cv2.imshow(WINDOW_NAME, image)
+
+        while cv2.waitKey(5) < 0:
+            pass
