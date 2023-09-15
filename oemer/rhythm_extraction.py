@@ -29,7 +29,8 @@ def scan_dot(
         bbox: BBox, 
         unit_size: float, 
         min_count: int, 
-        max_count: int) -> bool:
+        max_count: int
+) -> bool:
     right_bound = bbox[2] + 1
     start_y = bbox[1] - round(unit_size / 2)
     while True:
@@ -118,7 +119,8 @@ def polish_symbols(
         symbols: ndarray, 
         stems: ndarray, 
         clefs_sfns: ndarray, 
-        group_map: ndarray) -> ndarray:
+        group_map: ndarray
+) -> ndarray:
     st_width = 5
     beams_in_staff = morph_open(staff_pred, (st_width, 1))
 
@@ -135,10 +137,8 @@ def polish_symbols(
 def parse_beams(
         min_area_ratio: float = 0.07, 
         min_tp_ratio: float = 0.4, 
-        min_width_ratio: float = 0.2) -> Tuple[
-            ndarray, 
-            List[Tuple[Tuple[float, float], Tuple[float, float], float]], 
-            ndarray]:
+        min_width_ratio: float = 0.2
+) -> Tuple[ndarray, List[Tuple[Tuple[float, float], Tuple[float, float], float]], ndarray]:
     # Fetch parameters
     symbols = layers.get_layer('symbols_pred')
     staff_pred = layers.get_layer('staff_pred')
@@ -249,7 +249,7 @@ def parse_beam_overlap_regions(poly_map: ndarray, invalid_map: ndarray) -> Tuple
     sym_map, _ = scipy.ndimage.label(mix)
 
     out_map = np.zeros_like(reg_map)
-    map_info: Any = {}
+    map_info: Dict = {}
     for idx in range(1, feat_num+1):
         mask = (reg_map == idx)
         sym_labels = set(np.unique(sym_map[mask]))
@@ -289,7 +289,7 @@ def refine_map_info(map_info: Dict[int, Dict[str, Any]]) -> Dict[int, Dict[str, 
     groups = layers.get_layer('note_groups')
     group_map = layers.get_layer('group_map')
 
-    new_map_info: Any = {}
+    new_map_info: Dict = {}
     rev_map = {}
     for reg, info in map_info.items():
         cur_gids = info['gids']
@@ -352,7 +352,8 @@ def scan_beam_flag(
     end_y: int,
     threshold: float = 0.1,
     min_width_ratio: float = 0.25,
-    max_width_ratio: float = 0.9) -> int:
+    max_width_ratio: float = 0.9
+) -> int:
 
     start_x = int(start_x)
     start_y = int(start_y)
@@ -612,7 +613,8 @@ def extract(
     dot_min_area_ratio: float = 0.08,
     dot_max_area_ratio: float = 0.2,
     beam_min_area_ratio: float = 0.07,
-    agree_th: float = 0.15) -> Tuple[ndarray, List[Tuple[Tuple[float, float], Tuple[float, float], float]]]:
+    agree_th: float = 0.15
+) -> Tuple[ndarray, List[Tuple[Tuple[float, float], Tuple[float, float], float]]]:
 
     logger.debug("Parsing dot")
     parse_dot(max_area_ratio=dot_max_area_ratio, min_area_ratio=dot_min_area_ratio)

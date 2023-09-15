@@ -1,7 +1,8 @@
-from typing import List, Any, cast, Tuple
-from typing_extensions import Self
 import enum
 import pickle
+import typing
+from typing import List, Any,  Tuple, Union
+from typing_extensions import Self
 
 import cv2
 import matplotlib.pyplot as plt
@@ -31,7 +32,7 @@ class LineLabel(enum.Enum):
 class Line:
     def __init__(self) -> None:
         self.points: Any = []
-        self.label: LineLabel | None = None
+        self.label: Union[LineLabel, None] = None
 
     def add_point(self, y: int, x: int) -> None:
         self.points.append((y, x))
@@ -50,10 +51,10 @@ class Line:
         if self._y_center is not None:
             return self._y_center
         self._y_center = np.mean([point[0] for point in self.points])
-        return cast(float, self._y_center)
+        return typing.cast(float, self._y_center)
 
     @property
-    def y_upper(self) -> float | None:
+    def y_upper(self) -> Union[float, None]:
         if not hasattr(self, "_y_upper"):
             setattr(self, "_y_upper", None)
         if self._y_upper is not None:
@@ -68,7 +69,7 @@ class Line:
         if self._y_lower is not None:
             return self._y_lower
         self._y_lower = np.max([point[0] for point in self.points])
-        return cast(float, self._y_lower)
+        return typing.cast(float, self._y_lower)
 
     @property
     def x_center(self) -> float:
@@ -77,7 +78,7 @@ class Line:
         if self._x_center is not None:
             return self._x_center
         self._x_center = np.mean([point[1] for point in self.points])
-        return cast(float, self._x_center)
+        return typing.cast(float, self._x_center)
 
     @property
     def x_left(self) -> float:
@@ -86,7 +87,7 @@ class Line:
         if self._x_left is not None:
             return self._x_left
         self._x_left = np.min([point[1] for point in self.points])
-        return cast(float, self._x_left)  
+        return typing.cast(float, self._x_left)  
 
     @property
     def x_right(self) -> float:
@@ -95,7 +96,7 @@ class Line:
         if self._x_right is not None:
             return self._x_right
         self._x_right = np.max([point[1] for point in self.points])
-        return cast(float, self._x_right)
+        return typing.cast(float, self._x_right)
 
     @property
     def slope(self) -> float:
@@ -109,7 +110,7 @@ class Line:
         model = LinearRegression()
         model.fit(xs, ys)
         self._slope = model.coef_[0]
-        return cast(float, self._slope)
+        return typing.cast(float, self._slope)
 
     def __lt__(self, line: Self) -> bool:
         return self.y_center < line.y_center
@@ -131,20 +132,20 @@ class Line:
 class Staff:
     def __init__(self) -> None:
         self.lines: List[Line] = []
-        self.track: int | None = None
-        self.group: int | None  = None
+        self.track: Union[int, None] = None
+        self.group: Union[int, None]  = None
         self.is_interp: bool = False
 
     def add_line(self, line: Line) -> None:
         self.lines.append(line)
-        self._y_center: float | None = None
+        self._y_center: Union[float, None] = None
         self._y_upper = None
         self._y_lower = None
-        self._x_center: float | None = None
+        self._x_center: Union[float, None] = None
         self._x_left = None
         self._x_right = None
-        self._unit_size: float | None = None
-        self._slope: float | None = None
+        self._unit_size: Union[float, None] = None
+        self._slope: Union[float, None] = None
 
     @property
     def y_center(self) -> float:
@@ -166,7 +167,7 @@ class Staff:
         if self._y_upper is not None:
             return self._y_upper
         self._y_upper = np.min([line.y_upper for line in self.lines])
-        return cast(float, self._y_upper)
+        return typing.cast(float, self._y_upper)
 
     @y_upper.setter
     def y_upper(self, val):
@@ -179,7 +180,7 @@ class Staff:
         if self._y_lower is not None:
             return self._y_lower
         self._y_lower = np.max([line.y_lower for line in self.lines])
-        return cast(float, self._y_lower)
+        return typing.cast(float, self._y_lower)
 
     @y_lower.setter
     def y_lower(self, val):
@@ -205,7 +206,7 @@ class Staff:
         if self._x_left is not None:
             return self._x_left
         self._x_left = np.min([line.x_left for line in self.lines])
-        return cast(float, self._x_left)
+        return typing.cast(float, self._x_left)
 
     @x_left.setter
     def x_left(self, val):
@@ -218,7 +219,7 @@ class Staff:
         if self._x_right is not None:
             return self._x_right
         self._x_right = np.max([line.x_right for line in self.lines])
-        return cast(float, self._x_right)
+        return typing.cast(float, self._x_right)
 
     @x_right.setter
     def x_right(self, val):
@@ -319,11 +320,12 @@ def init_zones(staff_pred: ndarray, splits: int) -> Tuple[ndarray, int, int, int
 
 
 def extract(
-        splits: int = 8, 
-        line_threshold: float = 0.8, 
-        horizontal_diff_th: float = 0.1, 
-        unit_size_diff_th: float = 0.3, 
-        barline_min_degree: int = 75) -> Tuple[ndarray, ndarray]:
+    splits: int = 8, 
+    line_threshold: float = 0.8, 
+    horizontal_diff_th: float = 0.1, 
+    unit_size_diff_th: float = 0.3, 
+    barline_min_degree: int = 75
+) -> Tuple[ndarray, ndarray]:
     # Fetch parameters from layers
     staff_pred = layers.get_layer('staff_pred')
 

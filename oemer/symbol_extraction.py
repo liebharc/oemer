@@ -58,7 +58,7 @@ class RestType(enum.Enum):
 
 class Clef:
     def __init__(self) -> None:
-        self.bbox: list[int] | Any = None
+        self.bbox: BBox = None  # type: ignore
         self.track: Union[int, None] = None
         self.group: Union[int, None] = None
         self._label: ClefType = None  # type: ignore
@@ -82,7 +82,7 @@ class Clef:
 
 class Sfn:
     def __init__(self) -> None:
-        self.bbox: list[int] | Any = None
+        self.bbox: BBox = None  # type: ignore
         self.note_id: Union[int, None] = None
         self.is_key: Union[bool, None] = None  # Whether is key or accidental
         self.track: Union[int, None] = None
@@ -109,7 +109,7 @@ class Sfn:
 
 class Rest:
     def __init__(self) -> None:
-        self.bbox: list[int] | Any = None
+        self.bbox: BBox = None  # type: ignore
         self.has_dot: Union[bool, None] = None
         self.track: Union[int, None] = None
         self.group: Union[int, None] = None
@@ -135,7 +135,7 @@ class Rest:
 
 class Barline:
     def __init__(self) -> None:
-        self.bbox: list[int] | Any = None
+        self.bbox: BBox = None  # type: ignore
         self.group: Union[int, None] = None
 
     @property
@@ -196,10 +196,11 @@ def filter_barlines(lines: List[BBox], min_height_unit_ratio: float = 3.75) -> n
 
 
 def parse_barlines(
-        group_map: ndarray, 
-        stems_rests: ndarray, 
-        symbols: ndarray, 
-        min_height_unit_ratio: float = 3.75) -> ndarray:
+    group_map: ndarray, 
+    stems_rests: ndarray, 
+    symbols: ndarray, 
+    min_height_unit_ratio: float = 3.75
+) -> ndarray:
     # Remove notehead from prediction
     barline_cand = np.where(stems_rests-group_map>1, 1, 0)
 
@@ -252,10 +253,11 @@ def filter_clef_box(bboxes: List[BBox]) -> List[BBox]:
 
 
 def parse_clefs_keys(
-        clefs_keys: ndarray, 
-        unit_size: float, 
-        clef_size_ratio: float = 5, 
-        max_clef_tp_ratio: float = 0.45) -> Tuple[List[BBox], List[BBox], List[str], List[str]]:
+    clefs_keys: ndarray, 
+    unit_size: float, 
+    clef_size_ratio: float = 5, 
+    max_clef_tp_ratio: float = 0.45
+) -> Tuple[List[BBox], List[BBox], List[str], List[str]]:
     global cs_img
     cs_img = to_rgb_img(clefs_keys)  # type: ignore
 

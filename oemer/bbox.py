@@ -1,5 +1,5 @@
 
-from typing import Union, Any, List, Tuple
+from typing import Union, Any, List, Tuple, Dict
 
 import cv2
 import numpy as np
@@ -53,26 +53,27 @@ def merge_nearby_bbox(bboxes: List[BBox], distance: float, x_factor: int = 1, y_
 
 
 def rm_merge_overlap_bbox(
-        bboxes: List[BBox], 
-        mode: str = 'remove', 
-        overlap_ratio: float = 0.5) -> Union[List[BBox], List[BBox], List[BBox]]:
+    bboxes: List[BBox], 
+    mode: str = 'remove', 
+    overlap_ratio: float = 0.5
+) -> List[BBox]:
     assert mode in ['remove', 'merge'], mode
 
     pts = np.array([(box[2], box[3]) for box in bboxes])
     max_x, max_y = np.max(pts[:, 0]), np.max(pts[:, 1])
     mask = np.zeros((max_y, max_x), dtype=np.uint16)
 
-    box_info: Any = []
+    box_infos: List[Dict[str, Any]] = []
     for box in bboxes:
         area_size = (box[3]-box[1]) * (box[2]-box[0])
-        box_info.append({
+        box_infos.append({
             "bbox": box,
             "area_size": area_size
         })
-    box_info = sorted(box_info, key=lambda info: info["area_size"], reverse=True)
+    box_infos = sorted(box_infos, key=lambda info: info["area_size"], reverse=True)
 
     records = {}
-    for idx, box_info in enumerate(box_info):
+    for idx, box_info in enumerate(box_infos):
         box = box_info["bbox"]
         region = mask[box[1]:box[3], box[0]:box[2]]
         vals = set(np.unique(region))
@@ -155,11 +156,12 @@ def to_rgb_img(data: ndarray) -> ndarray:
 
 
 def draw_bounding_boxes(
-        bboxes: List[BBox], 
-        img: ndarray, 
-        color: Tuple[int, int, int] = (0, 255, 0), 
-        width: int = 2, 
-        inplace: bool = False) -> ndarray:
+    bboxes: List[BBox], 
+    img: ndarray, 
+    color: Tuple[int, int, int] = (0, 255, 0), 
+    width: int = 2, 
+    inplace: bool = False
+) -> ndarray:
     if len(img.shape) < 3:
         img = to_rgb_img(img)
     if not inplace:

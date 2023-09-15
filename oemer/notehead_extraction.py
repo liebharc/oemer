@@ -1,5 +1,6 @@
-from typing import List, Tuple, Any, Union
 import enum
+import typing
+from typing import List, Tuple, Any, Union
 
 import cv2
 import scipy.ndimage
@@ -36,10 +37,10 @@ class NoteType(enum.Enum):
 
 class NoteHead:
     def __init__(self) -> None:
-        self.points: list[tuple] = []
+        self.points: List[tuple] = []
         self.pitch: Union[int, None] = None
         self.has_dot: bool = False
-        self.bbox: list[float] | Any = None  # XYXY
+        self.bbox: BBox = None  # type: ignore 
         self.stem_up: Union[bool, None] = None
         self.stem_right: Union[bool, None] = None
         self.track: Union[int, None] = None
@@ -220,17 +221,17 @@ def get_notehead_bbox(
     max_h_ratio: int = 5,
     min_w_ratio: float = 0.3,
     max_w_ratio: int = 3,
-    min_area_ratio: float = 0.6) -> List[BBox]:
-
+    min_area_ratio: float = 0.6
+) -> List[BBox]:
     logger.debug("Morph noteheads")
     note = morph_notehead(pred, unit_size=global_unit_size)
     bboxes = get_bbox(note)
     bboxes = rm_merge_overlap_bbox(bboxes)
-    result_bboxes: Any = []
+    result_bboxes: List[BBox] = []
     for box in bboxes:
         unit_size = get_unit_size(*get_center(box))
-        box = check_bbox_size(box, pred, unit_size)  # type: ignore
-        result_bboxes.extend(box)
+        checked_boxes = check_bbox_size(box, pred, unit_size)  # type: ignore
+        result_bboxes.extend(checked_boxes)
     logger.debug("Detected noteheads: %d", len(result_bboxes))
 
     logger.debug("Filtering noteheads")
@@ -307,7 +308,7 @@ def gen_notes(bboxes: List[ndarray], symbols: ndarray) -> List[NoteHead]:
     for bbox in bboxes:
         # Instantiate notehead.
         nn = NoteHead()
-        nn.bbox = bbox
+        nn.bbox = typing.cast(BBox, bbox)
 
         # Add points
         region = symbols[bbox[1]:bbox[3], bbox[0]:bbox[2]]
@@ -412,7 +413,8 @@ def extract(
     min_area_ratio: float = 0.5,
     max_whole_note_width_factor: float = 1.5,
     y_dist_factor: int = 5,
-    hollow_filled_ratio_th: float = 1.3) -> List[NoteHead]:
+    hollow_filled_ratio_th: float = 1.3
+) -> List[NoteHead]:
 
     # Fetch parameters from layers
     pred = layers.get_layer('notehead_pred')

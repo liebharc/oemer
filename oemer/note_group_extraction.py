@@ -10,6 +10,7 @@ from oemer.inference import predict
 from oemer.utils import find_closest_staffs, get_global_unit_size, get_unit_size
 from oemer.logger import get_logger
 from oemer.bbox import (
+    BBox,
     get_center,
     merge_nearby_bbox,
     get_bbox,
@@ -27,10 +28,10 @@ logger = get_logger(__name__)
 class NoteGroup:
     def __init__(self) -> None:
         self.id: Union[int, None] = None
-        self.bbox: list[int] | Any = None
-        self.note_ids: list[int] = []
-        self.top_note_ids: list[int] = []  # For multi-melody cases
-        self.bottom_note_ids: list[int] = []  # For multi-melody cases
+        self.bbox: BBox = None  # type: ignore
+        self.note_ids: List[int] = []
+        self.top_note_ids: List[int] = []  # For multi-melody cases
+        self.bottom_note_ids: List[int] = []  # For multi-melody cases
         self.stem_up: Union[bool, None] = None
         self.has_stem: Union[bool, None] = None
         self.all_same_type: Union[bool, None] = None  # All notes are solid or hollow
@@ -70,7 +71,7 @@ def group_noteheads() -> Tuple[Dict[int, List[int]], ndarray]:
     if -1 in nids:
         nids.remove(-1)
 
-    groups: Any = {}
+    groups: Dict = {}
     for nid in nids:
         nys, nxs = np.where(note_id_map==nid)
 
@@ -203,10 +204,11 @@ def check_valid_new_group(ori_grp, tar_grp, group_map, max_x_diff_ratio=0.5):
 
 
 def parse_stem_direction(
-        groups: Dict[int, List[int]], 
-        group_map: ndarray, 
-        tolerance_ratio: float = 0.2, 
-        max_x_diff_ratio: float = 0.5) -> Tuple[Dict[int, List[int]], ndarray]:
+    groups: Dict[int, List[int]], 
+    group_map: ndarray, 
+    tolerance_ratio: float = 0.2, 
+    max_x_diff_ratio: float = 0.5
+) -> Tuple[Dict[int, List[int]], ndarray]:
     # Fetch parameters
     notes = layers.get_layer('notes')
 
@@ -289,7 +291,7 @@ def gen_groups(groups: Dict[int, List[int]], group_map: ndarray) -> Tuple[List[N
         ng.id = idx
         ng.note_ids = nids
         gy, gx = np.where(group_map==gid)
-        gbox = (np.min(gx), np.min(gy), np.max(gx), np.max(gy))
+        gbox = (int(np.min(gx)), int(np.min(gy)), int(np.max(gx)), int(np.max(gy)))
         nbox = np.array([notes[nid].bbox for nid in nids])
         nbox = (np.min(nbox[:, 0]), np.min(nbox[:, 1]), np.max(nbox[:, 2]), np.max(nbox[:, 3]))  # type: ignore
 

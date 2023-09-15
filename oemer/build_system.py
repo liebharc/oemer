@@ -71,7 +71,7 @@ class Key(enum.Enum):
 class Voice:
     def __init__(self) -> None:
         self.id: Union[int, None] = None
-        self.note_ids: list[int] = []
+        self.note_ids: List[int] = []
         self.stem_up: Union[bool, None] = None
         self.group_id: Union[int, None] = None
         self.x_center: Union[float, None] = None
@@ -121,16 +121,16 @@ class Measure:
         self.symbols: List[Any] = []  # List of symbols
         self.double_barline: Union[bool, None] = None
         self.has_clef: bool = False
-        self.clefs: list[Clef] = []
-        self.voices: list[NoteGroup] = []
-        self.sfns: list[Sfn] = []
-        self.rests: list[Rest] = []
+        self.clefs: List[Clef] = []
+        self.voices: List[NoteGroup] = []
+        self.sfns: List[Sfn] = []
+        self.rests: List[Rest] = []
         self.number: Union[int, None] = None
         self.at_beginning: bool = None  # type: ignore
         self.group: Union[int, None] = None
         self.key_override: Union[Key, None] = None
 
-        self.time_slots: list[List[Any]] = []
+        self.time_slots: List[List[Any]] = []
         self.slot_duras: np.ndarray = None  # type: ignore
 
     def add_symbols(self, symbols: Union[List[Union[Clef, Rest, Sfn]], List[Voice]]) -> None:
@@ -571,8 +571,8 @@ class AddInit(Action):
 
 class MusicXMLBuilder:
     def __init__(self, assume_simple: bool = False, title: Optional[str] = None) -> None:
-        self.measures: dict[int, list[Measure]] = {}
-        self.actions: list[Action] = []
+        self.measures: dict[int, List[Measure]] = {}
+        self.actions: List[Action] = []
         self.assume_simple = assume_simple
         self.title: str = title  # type: ignore
 
@@ -752,12 +752,12 @@ class MusicXMLBuilder:
 
 
 def gen_measure(
-        buffer: Union[List[Union[Clef, Rest, Sfn]], 
-                      List[Voice]], 
-                      grp: int, 
-                      num: int, 
-                      at_beginning: bool = False, 
-                      double_barline: bool = False) -> Measure:
+    buffer: Union[List[Union[Clef, Rest, Sfn]], List[Voice]], 
+    grp: int, 
+    num: int, 
+    at_beginning: bool = False, 
+    double_barline: bool = False
+) -> Measure:
     mm = Measure()
     mm.add_symbols(buffer)
     mm.double_barline = double_barline

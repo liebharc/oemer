@@ -1,5 +1,6 @@
 import os
 import pickle
+import typing
 from typing import List, Tuple, Any, Union
 from typing_extensions import Self
 
@@ -13,6 +14,7 @@ from sklearn.linear_model import LinearRegression
 
 from oemer.morph import morph_open
 from oemer.logger import get_logger
+from oemer.bbox import BBox
 
 
 logger = get_logger(__name__)
@@ -21,7 +23,7 @@ logger = get_logger(__name__)
 class Grid:
     def __init__(self) -> None:
         self.id: Union[int, None] = None
-        self.bbox: list[int] | Any = None  # XYXY
+        self.bbox: BBox = None  # type: ignore
         self.y_shift: int = 0
 
     @property
@@ -37,8 +39,8 @@ class GridGroup:
     def __init__(self) -> None:
         self.id: Union[int, None] = None
         self.reg_id: Union[int, None] = None
-        self.bbox: list[int] | Any = None
-        self.gids: list[int] = []
+        self.bbox: BBox = None  # type: ignore
+        self.gids: List[int] = []
         self.split_unit: int = None  # type: ignore
 
     @property
@@ -62,7 +64,7 @@ def build_grid(st_pred: ndarray, split_unit: int = 11) -> Tuple[ndarray, List[Gr
 
     is_on = lambda data: np.sum(data) > split_unit//2
 
-    grids: Any = []
+    grids: List[Grid] = []
     for i in range(0, w, split_unit):
         cur_y = 0
         last_y = 0
@@ -115,12 +117,13 @@ def build_grid_group(grid_map: ndarray, grids: List[Grid]) -> Tuple[ndarray, Lis
 
 
 def connect_nearby_grid_group(
-        gg_map: ndarray, 
-        grid_groups: List[GridGroup], 
-        grid_map: ndarray, 
-        grids: List[Grid], 
-        ref_count: int = 8, 
-        max_step: int = 20) -> ndarray:
+    gg_map: ndarray, 
+    grid_groups: List[GridGroup], 
+    grid_map: ndarray, 
+    grids: List[Grid], 
+    ref_count: int = 8, 
+    max_step: int = 20
+) -> ndarray:
     new_gg_map = np.copy(gg_map)
     ref_gids = grid_groups[0].gids[:ref_count]
     idx = 0
@@ -216,7 +219,7 @@ def connect_nearby_grid_group(
                         max(gg.bbox[2], box[2]),
                         max(gg.bbox[3], box[3])
                     )
-                    gg.bbox = [int(bb) for bb in gg.bbox]
+                    gg.bbox = typing.cast(BBox, [int(bb) for bb in gg.bbox])
                     box = [int(bb) for bb in box]  # type: ignore
                     grids.append(grid)
                     new_gg_map[box[1]:box[3], box[0]:box[2]] = gg.id

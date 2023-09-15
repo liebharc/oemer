@@ -3,11 +3,11 @@ import pickle
 import argparse
 import urllib.request
 from pathlib import Path
+from typing import Tuple
+from argparse import Namespace, ArgumentParser
+
 from PIL import Image
 from numpy import ndarray
-from typing import Tuple
-
-from argparse import Namespace, ArgumentParser
 
 from oemer.region_of_interest import calculate_region_of_interest
 
