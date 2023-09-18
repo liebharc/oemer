@@ -109,8 +109,6 @@ def inference(
 
 cached_models = {}
 
-idx = 0
-
 def predict(region: ndarray, model_name: str) -> str:
     max = np.max(region)
     region = region * 255 / max
@@ -123,9 +121,6 @@ def predict(region: ndarray, model_name: str) -> str:
     w = m_info['w']
     h = m_info['h']
     region_image = Image.fromarray(region.astype(np.uint8)).resize((w, h))
-    global idx
-    region_image.save(f"inputs/{model_name}_{idx}.png")
-    idx += 1
     region = np.array(region_image)
     pred = model.predict(np.array([region]))[0]
     best = np.argmax(pred)
