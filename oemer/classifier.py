@@ -1,5 +1,6 @@
 import random
 import pickle
+import shutil
 from os import remove
 from pathlib import Path
 from PIL import Image
@@ -27,66 +28,72 @@ TARGET_WIDTH = 40
 TARGET_HEIGHT = 70
 DISTANCE = 10
 
-DATASET_PATH = "./ds2_dense/segmentation"
+DATASET_PATH = "../ds2_dense/segmentation"
 
 
-def _collect(color, out_path, samples=100):
+def _collect(colors, out_path, samples=100):
+    print("Collecting", out_path)
     out_path = Path(out_path)
-    if not out_path.exists():
-        out_path.mkdir()
-
-    cur_samples = 0
-    add_space = 10
+    if out_path.exists():
+        shutil.rmtree(out_path)
+    out_path.mkdir(parents=True)
     idx = 0
-    while cur_samples < samples:
-        arr = find_example(DATASET_PATH, color)
-        if arr is None:
-            continue
-        arr[arr!=200] = 0
-        boxes = get_bbox(arr)
-        if len(boxes) > 1:
-            boxes = merge_nearby_bbox(boxes, DISTANCE)
-        boxes = rm_merge_overlap_bbox(boxes)
-        for box in boxes:
-            if idx >= samples:
-                break
-            print(f"{idx+1}/{samples}", end='\r')
-            patch = arr[box[1]-add_space:box[3]+add_space, box[0]-add_space:box[2]+add_space]
-            ratio = random.choice(np.arange(0.6, 1.3, 0.1))
-            tar_w = int(ratio * patch.shape[1])
-            tar_h = int(ratio * patch.shape[0])
-            img = imaugs.resize(Image.fromarray(patch.astype(np.uint8)), width=tar_w, height=tar_h)
+    add_space = 10
+    for color in colors:
+        cur_samples = 0
+        while cur_samples < samples / len(colors):
+            arr = find_example(DATASET_PATH, color)
+            if arr is None:
+                continue
+            arr[arr!=200] = 0
+            boxes = get_bbox(arr)
+            if len(boxes) > 1:
+                boxes = merge_nearby_bbox(boxes, DISTANCE)
+            boxes = rm_merge_overlap_bbox(boxes)
+            for box in boxes:
+                if idx >= samples:
+                    break
+                print(f"{idx+1}/{samples}", end='\r')
+                patch = arr[box[1]-add_space:box[3]+add_space, box[0]-add_space:box[2]+add_space]
+                ratio = random.choice(np.arange(0.6, 1.3, 0.1))
+                tar_w = int(ratio * patch.shape[1])
+                tar_h = int(ratio * patch.shape[0])
+                img = imaugs.resize(Image.fromarray(patch.astype(np.uint8)), width=tar_w, height=tar_h)
 
-            seed = random.randint(0, 1000)
-            img = imaugs.perspective_transform(img, seed=seed, sigma=3)
-            img = np.where(np.array(img)>0, 255, 0)
-            Image.fromarray(img.astype(np.uint8)).save(out_path / f"{idx}.png")
-            idx += 1
+                seed = random.randint(0, 1000)
+                np.float = float # Monkey patch to workaround removal of np.float
+                img = imaugs.perspective_transform(img, seed=seed, sigma=3)
+                img = np.where(np.array(img)>0, 255, 0)
+                Image.fromarray(img.astype(np.uint8)).save(out_path / f"{idx}.png")
+                idx += 1
 
-        cur_samples += len(boxes)
+            cur_samples += len(boxes)
     print()
 
 
 def collect_data(samples=400):
+    # the color is the gray scale value of the pixels in the segmentation image
     color_map = {
-        74: "sharp",
-        70: "flat",
-        72: "natural",
-        97: 'rest_whole',
-        98: 'rest_half',
-        99: 'rest_quarter',
-        100: 'rest_8th',
-        101: 'rest_16th',
-        102: 'rest_32nd',
-        103: 'rest_64th',
-        10: 'gclef',
-        13: 'fclef',
+        "sharp": [74],
+        "flat": [70],
+        "natural": [72],
+        'rest_whole': [97],
+        'rest_half': [98],
+        'rest_quarter': [99],
+        'rest_8th': [100],
+        'rest_16th': [101],
+        'rest_32nd': [102],
+        'rest_64th': [103],
+        'gclef': [10],
+        'fclef': [13],
+        "notehead_solid": [35, 37],
+        "notehead_hollow": [39, 41],
     }
 
-    for color, name in color_map.items():
+    for name, colors in color_map.items():
         print('Current', name)
-        _collect(color, f"train_data/{name}", samples=samples)
-        _collect(color, f"test_data/{name}", samples=samples)
+        _collect(colors, f"train_data/{name}", samples=samples)
+        _collect(colors, f"test_data/{name}", samples=samples)
 
 
 def train(folders):
@@ -118,10 +125,12 @@ def train(folders):
     model.fit(train_x, train_y)
     return model, class_map
 
+def build_class_map(folders):
+    return {idx: Path(ff).name for idx, ff in enumerate(folders)}
 
 def train_tf(folders):
     import tensorflow as tf
-    class_map = {idx: Path(ff).name for idx, ff in enumerate(folders)}
+    class_map = build_class_map(folders)
     train_x = []
     train_y = []
     samples = None
@@ -148,17 +157,17 @@ def train_tf(folders):
 
     model = tf.keras.models.Sequential([
         tf.keras.layers.InputLayer(input_shape=(TARGET_HEIGHT, TARGET_WIDTH, 1)),
-        tf.keras.layers.Conv2D(32, (3, 3), activation='relu'),
+        tf.keras.layers.Conv2D(48, (7, 7), activation='relu'), # 48, (7, 7)
         tf.keras.layers.BatchNormalization(),
         tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.Conv2D(32, (3, 3), activation='relu'),
+        tf.keras.layers.Conv2D(32, (5, 5), activation='relu'), # 32, (5, 5)
         tf.keras.layers.BatchNormalization(),
         tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.Conv2D(32, (3, 3), activation='relu'),
+        tf.keras.layers.Conv2D(24, (3, 3), activation='relu'), # 18, (3, 53)
         tf.keras.layers.BatchNormalization(),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Flatten(),
-        tf.keras.layers.Dense(128, activation='relu'),
+        tf.keras.layers.Dense(64, activation='relu'),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(len(folders), activation='softmax')
     ])
@@ -231,29 +240,76 @@ def predict(region, model_name):
     w = m_info['w']
     h = m_info['h']
     region = Image.fromarray(region.astype(np.uint8)).resize((w, h))
-    pred = model.predict(np.array(region).reshape(1, -1))
-    return m_info['class_map'][pred[0]]
+    pred = model.predict(np.array([region]))
+    return m_info['class_map'][round(pred[0][0])]
 
+
+def train_rests_above8():
+    folders = ["rest_8th", "rest_16th", "rest_32nd", "rest_64th"]
+    model, class_map = train_tf([f"train_data/{folder}" for folder in folders])
+    test_tf(model, [f"test_data/{folder}" for folder in folders])
+    output = {'model': model, 'w': TARGET_WIDTH, 'h': TARGET_HEIGHT, 'class_map': class_map}
+    pickle.dump(output, open(f"rests_above8.model", "wb"))
+
+
+def train_rests():
+    folders = ["rest_whole", "rest_quarter", "rest_8th"]
+    model, class_map = train_tf([f"train_data/{folder}" for folder in folders])
+    test_tf(model, [f"test_data/{folder}" for folder in folders])
+    output = {'model': model, 'w': TARGET_WIDTH, 'h': TARGET_HEIGHT, 'class_map': class_map}
+    pickle.dump(output, open(f"rests.model", "wb"))
+
+
+def train_all_rests():
+    folders = ["rest_whole", "rest_quarter", "rest_8th", "rest_16th", "rest_32nd", "rest_64th"]
+    model, class_map = train_tf([f"train_data/{folder}" for folder in folders])
+    test_tf(model, [f"test_data/{folder}" for folder in folders])
+    output = {'model': model, 'w': TARGET_WIDTH, 'h': TARGET_HEIGHT, 'class_map': class_map}
+    pickle.dump(output, open(f"all_rests.model", "wb"))
+
+
+def train_sfn():
+    folders = ["sharp", "flat", "natural"]
+    model, class_map = train_tf([f"train_data/{folder}" for folder in folders])
+    test_tf(model, [f"test_data/{folder}" for folder in folders])
+    output = {'model': model, 'w': TARGET_WIDTH, 'h': TARGET_HEIGHT, 'class_map': class_map}
+    pickle.dump(output, open(f"sfn.model", "wb"))
+
+
+def train_clefs():
+    folders = ["gclef", "fclef"]
+    model, class_map = train_tf([f"train_data/{folder}" for folder in folders])
+    test_tf(model, [f"test_data/{folder}" for folder in folders])
+    output = {'model': model, 'w': TARGET_WIDTH, 'h': TARGET_HEIGHT, 'class_map': class_map}
+    pickle.dump(output, open(f"clef.model", "wb"))
+
+
+def train_noteheads():
+    folders = ["notehead_solid", "notehead_hollow"]
+    model, class_map = train_tf([f"train_data/{folder}" for folder in folders])
+    test_tf(model, [f"test_data/{folder}" for folder in folders])
+    output = {'model': model, 'w': TARGET_WIDTH, 'h': TARGET_HEIGHT, 'class_map': class_map}
+    pickle.dump(output, open(f"notehead.model", "wb"))
 
 if __name__ == "__main__":
     samples = 400
-    # collect_data(samples=samples)
+    collect_data(samples=samples)
 
     # folders = ["gclef", "fclef"]; model_name = "clef"
     # folders = ["sharp", "flat", "natural"]; model_name = "sfn"
-    folders = ["rest_whole", "rest_quarter", "rest_8th"]; model_name = "rests"
+    #folders = ["rest_whole", "rest_quarter", "rest_8th"]; model_name = "rests"
     # folders = ["rest_8th", "rest_16th", "rest_32nd", "rest_64th"]; model_name = "rests_above8"
 
     #folders = ['clefs', 'sfns']; model_name = 'clefs_sfns'
     #folders = ["rest_whole", "rest_half", "rest_quarter", "rest_8th", "rest_16th", "rest_32nd", "rest_64th"]
 
     # Sklearn model
-    model, class_map = train([f"ds2_dense/train_data/{folder}" for folder in folders])
-    test(model, [f"ds2_dense/test_data/{folder}" for folder in folders])
+    #model, class_map = train([f"ds2_dense/train_data/{folder}" for folder in folders])
+    #test(model, [f"ds2_dense/test_data/{folder}" for folder in folders])
 
     # TF-based model
     # model, class_map = train_tf([f"train_data/{folder}" for folder in folders])
     # test_tf(model, [f"test_data/{folder}" for folder in folders])
 
-    output = {'model': model, 'w': TARGET_WIDTH, 'h': TARGET_HEIGHT, 'class_map': class_map}
-    pickle.dump(output, open(f"oemer/sklearn_models/{model_name}.model", "wb"))
+    #output = {'model': model, 'w': TARGET_WIDTH, 'h': TARGET_HEIGHT, 'class_map': class_map}
+    #pickle.dump(output, open(f"oemer/sklearn_models/{model_name}.model", "wb"))

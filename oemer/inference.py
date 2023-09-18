@@ -107,17 +107,29 @@ def inference(
 
     return class_map, out
 
+cached_models = {}
+
+idx = 0
 
 def predict(region: ndarray, model_name: str) -> str:
-    if np.max(region) == 1:
-        region *= 255
-    m_info = pickle.load(open(os.path.join(MODULE_PATH, f"sklearn_models/{model_name}.model"), "rb"))
+    max = np.max(region)
+    region = region * 255 / max
+    if model_name not in cached_models:
+        m_info = pickle.load(open(os.path.join(MODULE_PATH, f"sklearn_models/{model_name}.model"), "rb"))
+        cached_models[model_name] = m_info
+    else:
+        m_info = cached_models[model_name]
     model = m_info['model']
     w = m_info['w']
     h = m_info['h']
-    region = np.array(Image.fromarray(region.astype(np.uint8)).resize((w, h)))
-    pred = model.predict(region.reshape(1, -1))
-    return m_info['class_map'][pred[0]]
+    region_image = Image.fromarray(region.astype(np.uint8)).resize((w, h))
+    global idx
+    region_image.save(f"inputs/{model_name}_{idx}.png")
+    idx += 1
+    region = np.array(region_image)
+    pred = model.predict(np.array([region]))[0]
+    best = np.argmax(pred)
+    return m_info['class_map'][best]
 
 
 if __name__ == "__main__":

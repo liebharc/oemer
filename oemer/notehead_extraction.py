@@ -10,6 +10,7 @@ from numpy import ndarray
 from oemer import layers
 from oemer.constant import NoteHeadConstant as nhc
 from oemer.bbox import BBox, get_bbox, get_center, merge_nearby_bbox, rm_merge_overlap_bbox, to_rgb_img
+from oemer.inference import predict
 from oemer.utils import get_unit_size, find_closest_staffs, get_global_unit_size
 from oemer.logger import get_logger
 from oemer.staffline_extraction import Staff
@@ -417,13 +418,15 @@ def extract(
 ) -> List[NoteHead]:
 
     # Fetch parameters from layers
-    pred = layers.get_layer('notehead_pred')
+    notehead_pred = layers.get_layer('notehead_pred')
     symbols = layers.get_layer('symbols_pred')
+    notehead_binary = cv2.threshold(notehead_pred, 0.1, 1, cv2.THRESH_BINARY)[1].astype(np.uint8)
+    symbols = cv2.bitwise_and(symbols, symbols, mask = notehead_binary)
 
     unit_size = get_global_unit_size()
     logger.info("Analyzing notehead bboxes")
     bboxes = get_notehead_bbox(
-        pred,
+        notehead_pred,
         unit_size,
         min_h_ratio=min_h_ratio,
         max_h_ratio=max_h_ratio,
@@ -433,7 +436,7 @@ def extract(
     )
 
     global nn_img
-    nn_img = to_rgb_img(pred)
+    nn_img = to_rgb_img(notehead_pred)
 
     ## -- Special cases for half/whole notes -- ##
     # Whole notes has wider width, and may be splited into two bboxes

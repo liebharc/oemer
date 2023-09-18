@@ -336,9 +336,7 @@ def parse_rests(line_box: ndarray, unit_size: float, barlines: List[BBox]) -> Tu
             continue
 
         region = rests[box[1]:box[3], box[0]:box[2]]
-        pred = predict(region, "rests")
-        if "8th" in pred:
-            pred = predict(region, "rests_above8")
+        pred = predict(region, "all_rests")
         valid_box.append(box)
         label.append(pred)
 
