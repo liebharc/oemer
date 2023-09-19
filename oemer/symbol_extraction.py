@@ -10,11 +10,13 @@ from numpy import ndarray
 from oemer import layers
 from oemer import exceptions as E
 from oemer.inference import predict
+from oemer.staffline_extraction import Staff
 from oemer.utils import get_global_unit_size, slope_to_degree, get_unit_size, find_closest_staffs
 from oemer.logger import get_logger
 from oemer.general_filtering_rules import filter_out_of_range_bbox, filter_out_small_area
 from oemer.bbox import (
     BBox,
+    are_bboxes_overlapping_or_touching,
     merge_nearby_bbox,
     remove_overlapping_bbox,
     rm_merge_overlap_bbox,
@@ -455,10 +457,13 @@ def extract(min_barline_h_unit_ratio: float = 3) -> Tuple[List[Barline], List[Cl
     group_map = layers.get_layer('group_map')
 
     line_box = parse_barlines(group_map, stems_rests, symbols, min_height_unit_ratio=min_barline_h_unit_ratio)
+    line_box = filter_must_be_on_staff(line_box)
     barlines = gen_barlines(line_box)
 
     unit_size = get_global_unit_size()
     clef_box, key_box, clef_label, key_label = parse_clefs_keys(clefs_keys, unit_size)
+    clef_box = filter_must_be_on_staff(clef_box)
+    key_box = filter_must_be_on_staff(key_box)
     clefs = gen_clefs(clef_box, clef_label)
     sfns = gen_sfns(key_box, key_label)
 
@@ -467,6 +472,16 @@ def extract(min_barline_h_unit_ratio: float = 3) -> Tuple[List[Barline], List[Cl
 
     return barlines, clefs, sfns, rests
 
+def filter_must_be_on_staff(bboxes: List[BBox]):
+    all_staffs: List[Staff] = layers.get_layer("staffs").flatten()
+    x_tolerance = 5
+    valid_boxes: List[BBox] = []
+    for box in bboxes:
+        for staff in all_staffs:
+            if are_bboxes_overlapping_or_touching(box, (staff.x_left - x_tolerance, staff.y_upper, staff.x_right + x_tolerance, staff.y_lower)):
+                valid_boxes.append(box)
+                break
+    return valid_boxes
 
 def draw_symbols(symbols, ori_img, labels=None, color=(235, 64, 52)):
     bboxes = [sym.bbox for sym in symbols]

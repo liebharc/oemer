@@ -160,6 +160,15 @@ class Staff:
     def y_center(self, val):
         self._y_center = val
 
+    def move_y_center_by(self, offset):
+        self._y_center += offset
+        self._y_upper += offset
+        self._y_lower += offset
+        for line in self.lines:
+            line._y_center += offset
+            line._y_upper += offset
+            line._y_lower += offset
+
     @property
     def y_upper(self) -> float:
         if not hasattr(self, "_y_upper"):
@@ -520,14 +529,10 @@ def align_row(row: List[Staff]):
         else:
             valid_staffs.append(st)
 
-    average_y_lower = np.mean([st.y_lower for st in valid_staffs])
     average_y_center = np.mean([st.y_center for st in valid_staffs])
-    average_y_upper = np.mean([st.y_upper for st in valid_staffs])
 
     for st in invalid_staffs:
-        st.y_lower = average_y_lower
-        st.y_upper = average_y_upper
-        st.y_center = average_y_center
+        st.move_y_center_by(average_y_center - st.y_center)
     return row
 
 def align_every_row(staffs: List[List[Staff]]):

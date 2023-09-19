@@ -7,6 +7,7 @@ from numpy import ndarray
 from sklearn.cluster import AgglomerativeClustering
 
 
+# Left, Top, Right, Bottom points
 BBox = Tuple[int, int, int, int]
 
 def get_bbox(data: ndarray) -> List[BBox]:
@@ -124,6 +125,19 @@ def remove_overlapping_bbox(bboxes: List[BBox], forbidden_areas: List[BBox], ove
         if not overlap:
             result.append(bbox)
     return result
+
+def are_bboxes_overlapping_or_touching(bbox1, bbox2):
+    x11, y11, x12, y12 = bbox1
+    x21, y21, x22, y22 = bbox2
+    isBbox1LeftOfBbox2 = x12 < x21
+    isBbox1RightOfBbox2 = x11 > x22
+    isBbox1AboveBbox2 = y12 < y21
+    isBbox1BelowBbox2 = y11 > y22
+    if isBbox1LeftOfBbox2 or isBbox1RightOfBbox2 or isBbox1AboveBbox2 or isBbox1BelowBbox2:
+        return False
+    return True
+    
+   
     
 def find_lines(data: ndarray, min_len: int = 10, max_gap: int = 20) -> List[BBox]:
     assert len(data.shape) == 2, f"{type(data)} {data.shape}"

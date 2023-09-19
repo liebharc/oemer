@@ -1,7 +1,7 @@
 import os
 import pickle
 from PIL import Image
-from typing import Any, Optional, Tuple
+from typing import Any, Optional, Tuple, Dict
 
 import cv2
 import numpy as np
@@ -107,7 +107,7 @@ def inference(
 
     return class_map, out
 
-cached_models = {}
+cached_models: Dict = {}
 
 def predict(region: ndarray, model_name: str) -> str:
     max = np.max(region)
