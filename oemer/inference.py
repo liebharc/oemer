@@ -1,13 +1,12 @@
 import os
 import pickle
+import math
 from PIL import Image
 from typing import Any, Optional, Tuple, Dict
 
 import cv2
 import numpy as np
 from numpy import ndarray
-
-from oemer import MODULE_PATH
 
 
 def resize_image(image: Image.Image):
@@ -72,11 +71,31 @@ def inference(
 
     # Predict
     pred = []
-    for idx in range(0, len(data), batch_size):
-        print(f"{idx+1}/{len(data)} (step: {batch_size})", end="\r")
-        batch = np.array(data[idx:idx+batch_size])
-        out = model.predict(batch) if use_tf else sess.run(output_names, {'input': batch})[0]
-        pred.append(out)
+    if use_tf:
+        import tensorflow as tf
+        class ImageSequence(tf.keras.utils.Sequence):
+
+            def __init__(self, data, batch_size):
+                self.data = data
+                self.batch_size = batch_size
+
+            def __len__(self):
+                return math.ceil(len(self.data) / self.batch_size)
+
+            def __getitem__(self, idx):
+                idx *= self.batch_size
+                batch = np.array(self.data[idx:idx+self.batch_size])
+                return batch
+        tf_result = model.predict(ImageSequence(data, batch_size), use_multiprocessing=True, workers=4)
+        # Transform the result into the same shape as if we would have processed every batch individually
+        for idx in range(0, len(data), batch_size):
+            pred.append(tf_result[idx:idx+batch_size])
+    else:
+        for idx in range(0, len(data), batch_size):
+            print(f"{idx+1}/{len(data)} (step: {batch_size})", end="\r")
+            batch = np.array(data[idx:idx+batch_size])
+            out = sess.run(output_names, {'input': batch})[0]
+            pred.append(out)
 
     # Merge prediction patches
     output_shape = image.shape[:2] + (output_shape[-1],)
