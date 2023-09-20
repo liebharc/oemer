@@ -8,6 +8,8 @@ import cv2
 import numpy as np
 from numpy import ndarray
 
+from oemer import MODULE_PATH
+
 
 def resize_image(image: Image.Image):
     # Estimate target size with number of pixels.
