@@ -1,8 +1,12 @@
-from oemer import layers
+from typing import List
+
 import cv2
 import numpy as np
 
-def calculate_region_of_interest(detected_layers: list[np.ndarray]) -> np.ndarray:
+from oemer import layers
+
+
+def calculate_region_of_interest(detected_layers: List[np.ndarray]) -> np.ndarray:
     staff_and_notehead = detected_layers[0].astype(np.float32)
     for layer in detected_layers[1:]:
         staff_and_notehead += layer.astype(np.float32)
