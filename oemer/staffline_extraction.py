@@ -371,8 +371,8 @@ def extract(
         # Should all have 5 lines
         line_num = [len(staff.lines) for staff in staffs]
         if len(set(line_num)) != 1:
-            raise E.StafflineCountInconsistent(
-                f"Some of the stafflines contains less or more than 5 lines: {line_num}")
+            print(f"Some of the stafflines contains less or more than 5 lines: {line_num}")
+            continue
 
         # Check Staffs that are approximately at the same row.
         centers = np.array([staff.y_center for staff in staffs])
@@ -531,7 +531,7 @@ def align_row(row: List[Staff]):
         else:
             valid_staffs.append(st)
 
-    if len(valid_staffs) == 0 or len(invalid_staffs) == 0:
+    if len(valid_staffs) == 0 or len(invalid_staffs) == 0 or len(invalid_staffs) > len(valid_staffs):
         return row
 
     average_y_center = np.mean([st.y_center for st in valid_staffs])
