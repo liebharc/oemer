@@ -420,8 +420,12 @@ def extract(
     # Fetch parameters from layers
     notehead_pred = layers.get_layer('notehead_pred')
     symbols = layers.get_layer('symbols_pred')
-    notehead_binary = cv2.threshold(notehead_pred, 0.1, 1, cv2.THRESH_BINARY)[1].astype(np.uint8)
-    symbols = cv2.bitwise_and(symbols, symbols, mask = notehead_binary)
+    try:
+        notehead_binary = cv2.threshold(notehead_pred, 0.1, 1, cv2.THRESH_BINARY)[1].astype(np.uint8)
+        symbols = cv2.bitwise_and(symbols, symbols, mask = notehead_binary)
+    except Exception as e:
+        logger.error("Failed to threshold notehead prediction.")
+        logger.error(e)
 
     unit_size = get_global_unit_size()
     logger.info("Analyzing notehead bboxes")

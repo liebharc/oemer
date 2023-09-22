@@ -366,6 +366,7 @@ def extract(
     assert all([len(staff) == len(all_staffs[0]) for staff in all_staffs])
 
     norm = lambda data: np.abs(np.array(data) / np.mean(data) - 1)
+    valid_staffs = []
     for staffs in all_staffs.T:  # type: ignore
         # Should all have 5 lines
         line_num = [len(staff.lines) for staff in staffs]
@@ -376,16 +377,17 @@ def extract(
         # Check Staffs that are approximately at the same row.
         centers = np.array([staff.y_center for staff in staffs])
         if not np.all(norm(centers) < horizontal_diff_th):
-            raise E.StafflineNotAligned(
-                f"Centers of staff parts at the same row not aligned (Th: {horizontal_diff_th}): {norm(centers)}")
+            print(f"Centers of staff parts at the same row not aligned (Th: {horizontal_diff_th}): {norm(centers)}")
+            continue
 
         # Unit sizes should roughly all the same
         unit_size = np.array([staff.unit_size for staff in staffs])
         if not np.all(norm(unit_size) < unit_size_diff_th):
-            raise E.StafflineUnitSizeInconsistent(
-                f"Unit sizes not consistent (th: {unit_size_diff_th}): {norm(unit_size)}")
+            print(f"Unit sizes not consistent (th: {unit_size_diff_th}): {norm(unit_size)}")
+            continue
+        valid_staffs.append(staffs)
 
-    return np.array(all_staffs), zones
+    return np.array(valid_staffs).T, zones
 
 
 def extract_part(pred: ndarray, x_offset: int, line_threshold: float = 0.8) -> List[Staff]:
@@ -528,6 +530,9 @@ def align_row(row: List[Staff]):
             invalid_staffs.append(st)
         else:
             valid_staffs.append(st)
+
+    if len(valid_staffs) == 0 or len(invalid_staffs) == 0:
+        return row
 
     average_y_center = np.mean([st.y_center for st in valid_staffs])
 
