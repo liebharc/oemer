@@ -4,8 +4,7 @@
 [![PyPI version](https://badge.fury.io/py/oemer.svg)](https://badge.fury.io/py/oemer)
 ![PyPI - License](https://img.shields.io/github/license/BreezeWhite/oemer)
 [![Downloads](https://img.shields.io/pypi/dm/oemer?color=orange)](https://pypistats.org/packages/oemer)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7980155.svg)](https://zenodo.org/record/7980155)
-
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8429346.svg)](https://doi.org/10.5281/zenodo.8429346)
 
 
 
@@ -39,11 +38,17 @@ With GPU, this usually takes around 3~5 minutes to finish. For the first time ru
 Default to use **Onnxruntime** for inference. If you want to use **Tensorflow** for running the inference,
 add `--use-tf` to the command and make sure there is TF installed.
 
+
+## Issue
+
+### IMPORTANT!!
+***Please follow the issue template, fill in all required information. Otherwise, the issue will be closed directly without further processing!***
+
 If you encounter errors, try adding `--without-deskew` first (see [issue #9](https://github.com/BreezeWhite/oemer/issues/9)). If the problem still exists, file an issue and make sure following the template format.
 
 ### Available options
 ```
-usage: Oemer [-h] [-o OUTPUT_PATH] [--use-tf] [--save-cache] [-d] img_path
+usage: oemer [-h] [-o OUTPUT_PATH] [--use-tf] [--save-cache] [-d] img_path
 
 End-to-end OMR command line tool. Receives an image as input, and outputs
 MusicXML file.
@@ -66,15 +71,17 @@ optional arguments:
 ## Citation
 
 ```
-@software{yu_te_wu_2023_7980155,
-  author       = {Yu-Te, Wu},
-  title        = {BreezeWhite/oemer: v0.1.6},
-  month        = may,
+@software{yoyo_2023_8429346,
+  author       = {Yoyo and
+                  Christian Liebhardt and
+                  Sayooj Samuel},
+  title        = {BreezeWhite/oemer: v0.1.7},
+  month        = oct,
   year         = 2023,
   publisher    = {Zenodo},
-  version      = {v0.1.6},
-  doi          = {10.5281/zenodo.7980155},
-  url          = {https://doi.org/10.5281/zenodo.7980155}
+  version      = {v0.1.7},
+  doi          = {10.5281/zenodo.8429346},
+  url          = {https://doi.org/10.5281/zenodo.8429346}
 }
 ```
 
@@ -88,7 +95,7 @@ Notice that all descriptions below are simplfied compared to the actual implemen
 
 There are two UNet models being used: one serves to separate stafflines and all other symbols, and the other for separating more detailed symbol types (see [Model Prediction](#model-prediction) below). The training script is under `oemer/train.py`.
 
-The two models use different datasets for training: [CvcMuscima-Distortions](http://www.cvc.uab.es/cvcmuscima/index_database.html) for training the first model, and [DeepScores-extended](https://zenodo.org/record/4012193) for the second model. Both trainings leverage multiple types of image augmentation techniques to enhance the robustness (see [here](https://github.com/BreezeWhite/oemer/blob/main/oemer/train.py#L50-L108)).
+The two models use different datasets for training: [CvcMuscima-Distortions](http://pages.cvc.uab.es/cvcmuscima/index_database.html) for training the first model, and [DeepScores-extended](https://zenodo.org/record/4012193) for the second model. Both trainings leverage multiple types of image augmentation techniques to enhance the robustness (see [here](https://github.com/BreezeWhite/oemer/blob/main/oemer/train.py#L50-L108)).
 
 To identify invidual symbol types on the predictions, SVM models are used. The data used to train SVM models are extracted from [DeepScores-extended](https://zenodo.org/record/4012193). There are three different SVM models that are used to classify symbols. More details can be found in [oemer/classifier.py](https://github.com/BreezeWhite/oemer/blob/main/oemer/classifier.py).
 

@@ -163,6 +163,9 @@ def connect_nearby_grid_group(
             labels = set(unique)  # Overlapped grid group IDs
             if -1 in labels:
                 labels.remove(-1)
+                no_id_idx = np.where(unique==-1)[0][0]
+                unique = np.delete(unique, no_id_idx)
+                counts = np.delete(counts, no_id_idx)
 
             cands_box.append((end_x-step_size, y, end_x, y+h))
             if len(labels) == 0:

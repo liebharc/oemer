@@ -1,12 +1,20 @@
+import sys
 import setuptools
 
 
 with open("README.md") as red:
     ldest = red.read()
 
+
+if sys.platform == 'darwin':
+    onnx_package = 'onnxruntime'
+else:
+    onnx_package = 'onnxruntime-gpu'
+
+
 setuptools.setup(
     name='oemer',
-    version='0.1.6',
+    version='0.1.7',
     author='BreezeWhite',
     author_email='miyasihta2010@tuta.io',
     description='End-to-end Optical Music Recognition (OMR) system.',
@@ -26,17 +34,18 @@ setuptools.setup(
             ]
     },
     install_requires=[
-        'onnxruntime-gpu',
+        onnx_package,
         'opencv-python-headless>=4.5.3.56',
         'matplotlib',
         'pillow',
         'scipy',
         'scikit-learn>=1.2',
         'types-Pillow',
-        'types-tensorflow'
+        'types-tensorflow',
+        'typing-extensions',
     ],
     extras_require={
-        'tf': ['tensorflow-gpu', 'tf2onnx'],
+        'tf': ['tensorflow', 'tf2onnx'],
     },
     entry_points={'console_scripts': ['oemer = oemer.ete:main']},
     keywords=['OMR', 'optical-music-recognition', 'AI', 'machine-learning', 'image-processing'],
