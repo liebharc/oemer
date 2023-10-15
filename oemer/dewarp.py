@@ -302,6 +302,16 @@ def dewarp(img: ndarray, coords_x: ndarray, coords_y: ndarray) -> ndarray:
     return cv2.remap(img.astype(np.float32), coords_x,coords_y, cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
 
 
+def warp_randomly(img: ndarray, seed: int) -> ndarray:
+    np.random.seed(seed)
+    h, w = img.shape[:2]
+    coords_x = np.arange(w)
+    params = np.random.randint(-10, 10, size=4)
+    coords_y = params[0] * coords_x**3 + params[1] * coords_x**2 + params[2] * coords_x + params[3]
+    np.round(coords_y, out=coords_y)
+    print(coords_y)
+    return dewarp(img, coords_x, coords_y.astype(np.int32))
+
 if __name__ == "__main__":
     f_name = "wind2"
     #f_name = "last"
