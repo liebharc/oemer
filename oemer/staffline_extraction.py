@@ -366,7 +366,7 @@ def extract(
     assert all([len(staff) == len(all_staffs[0]) for staff in all_staffs])
 
     norm = lambda data: np.abs(np.array(data) / np.mean(data) - 1)
-    valid_staffs = []
+    valid_staffs: list[Staff] = []
     for staffs in all_staffs.T:  # type: ignore
         # Should all have 5 lines
         line_num = [len(staff.lines) for staff in staffs]

@@ -11,7 +11,7 @@ import augly.image as imaugs
 
 from .build_label import build_label
 from .models.unet import semantic_segmentation, u_net
-from .constant import CHANNEL_NUM
+from .constant_min import CHANNEL_NUM
 
 
 
@@ -419,6 +419,7 @@ def train_model(
     val_batch_size=8,
     early_stop=8
 ):
+    np.float = float # Monkey patch to workaround removal of np.float
     # feat_files = get_cvc_data_paths(dataset_path)
     feat_files = get_deep_score_data_paths(dataset_path)
     random.shuffle(feat_files)
@@ -444,11 +445,11 @@ def train_model(
     #model = naive_conv(win_size=win_size)
     #model = u_net(win_size=win_size, out_class=CHANNEL_NUM)
     model = semantic_segmentation(win_size=win_size, out_class=CHANNEL_NUM)
-    optim = tf.keras.optimizers.Adam(learning_rate=WarmUpLearningRate(learning_rate))
+    #optim = tf.keras.optimizers.Adam(learning_rate=WarmUpLearningRate(learning_rate))
     #loss = tf.keras.losses.BinaryCrossentropy(label_smoothing=0.1)
     #loss = tf.keras.losses.CategoricalCrossentropy()
     loss = tfa.losses.SigmoidFocalCrossEntropy()
-    model.compile(optimizer=optim, loss=loss, metrics=['accuracy'])
+    model.compile(optimizer="adam", loss=loss, metrics=['accuracy'])
 
     callbacks = [
         tf.keras.callbacks.EarlyStopping(patience=early_stop, monitor='val_accuracy'),

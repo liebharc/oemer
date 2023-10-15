@@ -13,3 +13,7 @@ checkpoints/
 *.musicxml
 *.mp3
 *.swp
+/*.png
+/*.pkl
+/*.jpeg
+/*.jpg
