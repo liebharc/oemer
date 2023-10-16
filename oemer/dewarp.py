@@ -304,13 +304,27 @@ def dewarp(img: ndarray, coords_x: ndarray, coords_y: ndarray) -> ndarray:
 
 def warp_randomly(img: ndarray, seed: int) -> ndarray:
     np.random.seed(seed)
+    img = img.astype(np.float32)
     h, w = img.shape[:2]
-    coords_x = np.arange(w)
-    params = np.random.randint(-10, 10, size=4)
-    coords_y = params[0] * coords_x**3 + params[1] * coords_x**2 + params[2] * coords_x + params[3]
-    np.round(coords_y, out=coords_y)
-    print(coords_y)
-    return dewarp(img, coords_x, coords_y.astype(np.int32))
+    coords_x = np.arange(h).astype(np.float32)
+    params = np.random.random_sample(size=4) 
+    params = [params[0] / 1000 / 1000, params[1] / 1000, params[2] / 10 + 0.9, 0]
+    # Polynomial was inspired by https://github.com/lmmx/page-dewarp/blob/master/derive_cubic.py
+    coords_y = (params[0] * coords_x**3 + params[1] * coords_x**2 + params[2] * coords_x + params[3]).astype(np.float32)
+    
+    out = np.copy(img)
+    if out.ndim == 2:
+        for i in range(out.shape[-1]):
+            column = out[..., i]
+            mapped = cv2.remap(column, coords_x, coords_y, cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+            out[..., i] = mapped.T[0]
+    else:
+        for i in range(out.shape[1]):
+            for j in range(out.shape[2]):
+                column = out[..., i, j]
+                mapped = cv2.remap(column, coords_x, coords_y, cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+                out[..., i, j] = mapped.T[0]
+    return out.astype(np.uint8)
 
 if __name__ == "__main__":
     f_name = "wind2"

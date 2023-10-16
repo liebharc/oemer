@@ -12,7 +12,7 @@ import augly.image as imaugs
 from .build_label import build_label
 from .models.unet import semantic_segmentation, u_net
 from .constant_min import CHANNEL_NUM
-
+from .dewarp import warp_randomly
 
 
 def get_cvc_data_paths(dataset_path):
@@ -122,6 +122,12 @@ def batch_transform(img, trans_func):
         result.append(np.array(tmp_img))
     return np.dstack(result)
 
+def transform_image(img, seed: int):
+    np.float = float # Monkey patch to workaround removal of np.float
+    img = imaugs.perspective_transform(img, seed=seed, sigma=70)
+    img = warp_randomly(np.array(img), seed=seed)
+    img = Image.fromarray(img)
+    return img
 
 class DataLoader:
     def __init__(self, feature_files, win_size=256, num_samples=100, min_step_size=0.2, num_worker=4):
@@ -175,10 +181,9 @@ class DataLoader:
 
                 # Random perspective transform
                 seed = random.randint(0, 1000)
-                perspect_trans = lambda img: imaugs.perspective_transform(img, seed=seed, sigma=70)
-                image = np.array(perspect_trans(image))  # RGB image
-                staff_img = np.array(perspect_trans(staff_img))  # 1-bit mask
-                symbol_img = np.array(perspect_trans(symbol_img))  # 1-bit mask
+                image = np.array(transform_image(image, seed))  # RGB image
+                staff_img = np.array(transform_image(staff_img, seed))  # 1-bit mask
+                symbol_img = np.array(transform_image(symbol_img, seed))  # 1-bit mask
                 staff_img = np.where(staff_img, 1, 0)
                 symbol_img = np.where(symbol_img, 1, 0)
 
@@ -293,7 +298,7 @@ class DsDataLoader:
 
                 # Random perspective transform
                 seed = random.randint(0, 1000)
-                perspect_trans = lambda img: imaugs.perspective_transform(img, seed=seed, sigma=70)
+                perspect_trans = lambda img: transform_image(img, seed)
                 image = np.array(batch_transform(image, perspect_trans))  # RGB image
                 label = np.array(batch_transform(label, perspect_trans))
 
@@ -419,7 +424,6 @@ def train_model(
     val_batch_size=8,
     early_stop=8
 ):
-    np.float = float # Monkey patch to workaround removal of np.float
     # feat_files = get_cvc_data_paths(dataset_path)
     feat_files = get_deep_score_data_paths(dataset_path)
     random.shuffle(feat_files)
