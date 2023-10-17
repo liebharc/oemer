@@ -122,7 +122,7 @@ def batch_transform(img, trans_func):
         result.append(np.array(tmp_img))
     return np.dstack(result)
 
-def transform_image(img, seed: int):
+def transform_perspective(img, seed: int):
     np.float = float # Monkey patch to workaround removal of np.float
     img = imaugs.perspective_transform(img, seed=seed, sigma=70)
     img = warp_randomly(np.array(img), seed=seed)
@@ -181,9 +181,9 @@ class DataLoader:
 
                 # Random perspective transform
                 seed = random.randint(0, 1000)
-                image = np.array(transform_image(image, seed))  # RGB image
-                staff_img = np.array(transform_image(staff_img, seed))  # 1-bit mask
-                symbol_img = np.array(transform_image(symbol_img, seed))  # 1-bit mask
+                image = np.array(transform_perspective(image, seed))  # RGB image
+                staff_img = np.array(transform_perspective(staff_img, seed))  # 1-bit mask
+                symbol_img = np.array(transform_perspective(symbol_img, seed))  # 1-bit mask
                 staff_img = np.where(staff_img, 1, 0)
                 symbol_img = np.where(symbol_img, 1, 0)
 
@@ -298,7 +298,7 @@ class DsDataLoader:
 
                 # Random perspective transform
                 seed = random.randint(0, 1000)
-                perspect_trans = lambda img: transform_image(img, seed)
+                perspect_trans = lambda img: transform_perspective(img, seed)
                 image = np.array(batch_transform(image, perspect_trans))  # RGB image
                 label = np.array(batch_transform(label, perspect_trans))
 
@@ -422,33 +422,51 @@ def train_model(
     batch_size=8,
     val_steps=200,
     val_batch_size=8,
-    early_stop=8
+    early_stop=8,
+    data_model="dense"
 ):
-    # feat_files = get_cvc_data_paths(dataset_path)
-    feat_files = get_deep_score_data_paths(dataset_path)
+    if data_model == "dense":
+        feat_files = get_deep_score_data_paths(dataset_path)
+    else:
+        feat_files = get_cvc_data_paths(dataset_path)
     random.shuffle(feat_files)
     split_idx = round(train_val_split * len(feat_files))
     train_files = feat_files[split_idx:]
     val_files = feat_files[:split_idx]
 
     print(f"Loading dataset. Train/validation: {len(train_files)}/{len(val_files)}")
-    train_data = DsDataLoader(
-            train_files,
-            win_size=win_size,
-            num_samples=epochs*steps*batch_size
-        ) \
-        .get_dataset(batch_size)
-    val_data = DsDataLoader(
-            val_files,
-            win_size=win_size,
-            num_samples=epochs*val_steps*val_batch_size
-        ) \
-        .get_dataset(val_batch_size)
+    if data_model == "dense":
+        train_data = DsDataLoader(
+                train_files,
+                win_size=win_size,
+                num_samples=epochs*steps*batch_size
+            ) \
+            .get_dataset(batch_size)
+        val_data = DsDataLoader(
+                val_files,
+                win_size=win_size,
+                num_samples=epochs*val_steps*val_batch_size
+            ) \
+            .get_dataset(val_batch_size)
+        model = semantic_segmentation(win_size=win_size, out_class=CHANNEL_NUM)
+    else:
+        train_data = DataLoader(
+                train_files,
+                win_size=win_size,
+                num_samples=epochs*steps*batch_size
+            ) \
+            .get_dataset(batch_size)
+        val_data = DataLoader(
+                val_files,
+                win_size=win_size,
+                num_samples=epochs*val_steps*val_batch_size
+            ) \
+            .get_dataset(val_batch_size)
+        #model = naive_conv(win_size=win_size)
+        #model = u_net(win_size=win_size, out_class=CHANNEL_NUM)
+        model = semantic_segmentation(win_size=win_size, out_class=3)
 
     print("Initializing model")
-    #model = naive_conv(win_size=win_size)
-    #model = u_net(win_size=win_size, out_class=CHANNEL_NUM)
-    model = semantic_segmentation(win_size=win_size, out_class=CHANNEL_NUM)
     #optim = tf.keras.optimizers.Adam(learning_rate=WarmUpLearningRate(learning_rate))
     #loss = tf.keras.losses.BinaryCrossentropy(label_smoothing=0.1)
     #loss = tf.keras.losses.CategoricalCrossentropy()
