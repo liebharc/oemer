@@ -125,8 +125,11 @@ def batch_transform(img, trans_func):
 def transform_perspective(img, seed: int):
     np.float = float # Monkey patch to workaround removal of np.float
     img = imaugs.perspective_transform(img, seed=seed, sigma=70)
-    img = warp_randomly(np.array(img), seed=seed)
-    img = Image.fromarray(img)
+    np.random.seed(seed)
+    # Introduce warping only for a subset of images at all
+    if np.random.rand() < 0.2:
+        img = warp_randomly(np.array(img), seed=seed)
+        img = Image.fromarray(img)
     return img
 
 class DataLoader:
