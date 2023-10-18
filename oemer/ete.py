@@ -322,7 +322,7 @@ def main() -> None:
             raise FileNotFoundError(f"The given image path doesn't exists: {args.img_path}")
 
     # Check there are checkpoints
-    chk_path = os.path.join(MODULE_PATH, "checkpoints/unet_big/model.onnx")
+    chk_path = os.path.join(MODULE_PATH, "checkpoints/unet_big/weights.h5")
     if not os.path.exists(chk_path):
         logger.warn("No checkpoint found in %s", chk_path)
         for idx, (title, url) in enumerate(CHECKPOINTS_URL.items()):
