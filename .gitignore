@@ -17,3 +17,8 @@ checkpoints/
 /*.pkl
 /*.jpeg
 /*.jpg
+
+ds2_dense
+ds2_dense.*
+CvcMuscima-Distortions
+CVCMUSCIMA_SR.*
