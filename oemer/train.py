@@ -125,15 +125,15 @@ def batch_transform(img, trans_func):
 def transform_perspective(img, seed: int):
     np.float = float # Monkey patch to workaround removal of np.float
     img = imaugs.perspective_transform(img, seed=seed, sigma=70)
-    np.random.seed(seed)
+    pseudo_random = np.random.RandomState(seed)
     # Introduce warping only for a subset of images at all
-    if np.random.rand() < 0.2:
+    if pseudo_random.rand() < 0.2:
         img = warp_randomly(np.array(img), seed=seed)
         img = Image.fromarray(img)
     return img
 
 class DataLoader:
-    def __init__(self, feature_files, win_size=256, num_samples=100, min_step_size=0.2, num_worker=4):
+    def __init__(self, feature_files, win_size=256, num_samples=100, min_step_size=0.2, num_worker=1):
         self.feature_files = feature_files
         random.shuffle(self.feature_files)
         self.win_size = win_size
@@ -249,7 +249,7 @@ class DataLoader:
 
 
 class DsDataLoader:
-    def __init__(self, feature_files, win_size=256, num_samples=100, step_size=0.5, num_worker=4):
+    def __init__(self, feature_files, win_size=256, num_samples=100, step_size=0.5, num_worker=1):
         self.feature_files = feature_files
         random.shuffle(self.feature_files)
         self.win_size = win_size

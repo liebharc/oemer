@@ -311,11 +311,11 @@ def warp_randomly(img: ndarray, seed: int) -> ndarray:
     seed: int
         Random seed
     """
-    np.random.seed(seed)
+    pseudo_random = np.random.RandomState(seed)
     img = img.astype(np.float32)
     h, w = img.shape[:2]
     coords_x = np.arange(h).astype(np.float32)
-    params = np.random.random_sample(size=4) 
+    params = pseudo_random.random_sample(size=4) 
     params = [params[0] / 1000 / 1000 / 10, params[1] / 1000 / 10, 1, 0] 
     # Polynomial was inspired by https://github.com/lmmx/page-dewarp/blob/master/derive_cubic.py
     coords_y = (params[0] * coords_x**3 + params[1] * coords_x**2 + params[2] * coords_x + params[3]).astype(np.float32)
@@ -333,6 +333,7 @@ def warp_randomly(img: ndarray, seed: int) -> ndarray:
                 column = out[..., i, j]
                 mapped = cv2.remap(column, coords_x, coords_y, cv2.INTER_NEAREST, borderMode=cv2.BORDER_REPLICATE)
                 out[..., i, j] = mapped.T[0]
+    out = 255.0 / np.max(out) * out 
     return out.astype(np.uint8)
 
 if __name__ == "__main__":
