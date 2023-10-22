@@ -20,7 +20,7 @@ from oemer import MODULE_PATH
 from oemer import layers
 from oemer.inference import inference
 from oemer.logger import DEBUG_LEVEL, DEBUG_OUTPUT, WINDOW_NAME, debug_show, get_logger, set_debug_level
-from oemer.dewarp import estimate_coords, dewarp
+from oemer.dewarp import dewarp_rgb, estimate_coords, dewarp
 from oemer.staffline_extraction import extract as staff_extract
 from oemer.notehead_extraction import extract as note_extract
 from oemer.note_group_extraction import extract as group_extract
@@ -47,22 +47,24 @@ def clear_data() -> None:
     for l in lls:
         layers.delete_layer(l)
 
-
-def generate_pred(img_path: str, use_tf: bool = False) -> Tuple[ndarray, ndarray, ndarray, ndarray, ndarray]:
+def generate_pred_staff(image: np.ndarray, use_tf: bool = False) -> Tuple[ndarray, ndarray]:
     logger.info("Extracting staffline and symbols")
     staff_symbols_map, _ = inference(
         os.path.join(MODULE_PATH, "checkpoints/unet_big"),
-        img_path,
+        image,
         use_tf=use_tf,
     )
     staff = np.where(staff_symbols_map==1, 1, 0)
     symbols = np.where(staff_symbols_map==2, 1, 0)
+    return staff, symbols
 
+
+def generate_pred(image: np.ndarray, use_tf: bool = False) -> Tuple[ndarray, ndarray, ndarray, ndarray, ndarray]:
+    staff, symbols = generate_pred_staff(image, use_tf=use_tf)
     logger.info("Extracting layers of different symbols")
-    symbol_thresholds = [0.5, 0.4, 0.4]
     sep, _ = inference(
         os.path.join(MODULE_PATH, "checkpoints/seg_net"),
-        img_path,
+        image,
         manual_th=None,
         use_tf=use_tf,
     )
@@ -117,6 +119,7 @@ def extract(args: Namespace) -> str:
     img_path = Path(args.img_path)
     f_name = os.path.splitext(img_path.name)[0]
     pkl_path = img_path.parent / f"{f_name}.pkl"
+    original_image = cv2.imread(str(img_path))
     if pkl_path.exists():
         # Load from cache
         logger.info("Loading from cache")
@@ -131,7 +134,16 @@ def extract(args: Namespace) -> str:
         if args.use_tf:
             ori_inf_type = os.environ.get("INFERENCE_WITH_TF", None)
             os.environ["INFERENCE_WITH_TF"] = "true"
-        staff, symbols, stems_rests, notehead, clefs_keys = generate_pred(str(img_path), use_tf=args.use_tf)
+        if args.two_pass_deskew:
+            # Pass 1
+            logger.info("Staffline Pass 1")
+            staff, symbols = generate_pred_staff(original_image, use_tf=args.use_tf)
+            # Pass 2
+            logger.info("Staffline Pass 2")
+            coords_x, coords_y = estimate_coords(staff)
+            original_image = dewarp_rgb(original_image, coords_x, coords_y)
+            debug_show(f_name, 1.0, 'input_dewarp_pass1', original_image)
+        staff, symbols, stems_rests, notehead, clefs_keys = generate_pred(original_image, use_tf=args.use_tf)
         if args.use_tf and ori_inf_type is not None:
             os.environ["INFERENCE_WITH_TF"] = ori_inf_type
         if args.save_cache:
@@ -145,9 +157,8 @@ def extract(args: Namespace) -> str:
             pickle.dump(data, open(pkl_path, "wb"))
 
     # Load the original image, resize to the same size as prediction.
-    image = cv2.imread(str(img_path))
-    image = cv2.resize(image, (staff.shape[1], staff.shape[0]))
-    debug_show(f_name, 0.0, 'original', image)
+    original_image = cv2.resize(original_image, (staff.shape[1], staff.shape[0]))
+    debug_show(f_name, 0.0, 'original', original_image)
     debug_show(f_name, 0.0, 'staff', staff, scale=True)
     debug_show(f_name, 0.0, 'notehead', notehead, scale=True)
     debug_show(f_name, 0.0, 'symbols', symbols, scale=True)
@@ -163,16 +174,16 @@ def extract(args: Namespace) -> str:
             stems_rests_dewarped = dewarp(stems_rests, coords_x, coords_y)
             clefs_keys_dewarped = dewarp(clefs_keys, coords_x, coords_y)
             notehead_dewarped = dewarp(notehead, coords_x, coords_y)
-            image_dewarped = image.copy()
-            for i in range(image.shape[2]):
-                image_dewarped[..., i] = dewarp(image[..., i], coords_x, coords_y)
+            image_dewarped = original_image.copy()
+            for i in range(original_image.shape[2]):
+                image_dewarped[..., i] = dewarp(original_image[..., i], coords_x, coords_y)
             logger.info("Dewarping done")
             staff = staff_dewarped
             symbols = symbols_dewarped
             stems_rests = stems_rests_dewarped
             clefs_keys = clefs_keys_dewarped
             notehead = notehead_dewarped
-            image = image_dewarped
+            original_image = image_dewarped
         except Exception as e:
             logger.error("Dewarping failed, skipping.")
 
@@ -190,9 +201,9 @@ def extract(args: Namespace) -> str:
     layers.register_layer("notehead_pred", notehead)
     layers.register_layer("symbols_pred", symbols)
     layers.register_layer("staff_pred", staff)
-    layers.register_layer("original_image", image)
+    layers.register_layer("original_image", original_image)
     
-    debug_show(f_name, 1.0, 'original', image)
+    debug_show(f_name, 1.0, 'original', original_image)
     debug_show(f_name, 1.0, 'staff', staff, scale=True)
     debug_show(f_name, 1.0, 'notehead', notehead, scale=True)
     debug_show(f_name, 1.0, 'symbols', symbols, scale=True)
@@ -275,6 +286,10 @@ def get_parser() -> ArgumentParser:
         "-d",
         "--without-deskew",
         help="Disable the deskewing step if you are sure the image has no skew.",
+        action='store_true')
+    parser.add_argument(
+        "--two-pass-deskew",
+        help="Deskew in two passes, might improve deskew results.",
         action='store_true')
     parser.add_argument(
         "--debug",

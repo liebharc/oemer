@@ -298,6 +298,14 @@ def estimate_coords(staff_pred: ndarray) -> Tuple[ndarray, ndarray]:
     return coords_x, coords_y
 
 
+def dewarp_rgb(img: ndarray, coords_x: ndarray, coords_y: ndarray) -> ndarray:
+    out = cv2.resize(img, (coords_x.shape[1], coords_x.shape[0]))
+    for i in range(out.shape[-1]):
+        column = out[..., i]
+        mapped = cv2.remap(column, coords_x, coords_y, cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+        out[..., i] = mapped
+    return out
+
 def dewarp(img: ndarray, coords_x: ndarray, coords_y: ndarray) -> ndarray:
     return cv2.remap(img.astype(np.float32), coords_x,coords_y, cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
 
