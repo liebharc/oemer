@@ -1,3 +1,4 @@
+import sys
 import enum
 import pickle
 import typing
@@ -747,14 +748,19 @@ if __name__ == "__main__":
     #f_name = "girl"
     #f_name = "1"
 
-    pred = pickle.load(open(f"../test_imgs/{f_name}.pkl", "rb"))['staff']
-    layers.register_layer("staff_pred", pred)
+    pred = pickle.load(open(sys.argv[1], "rb"))
+    layers.register_layer("staff_pred", pred['staff'])
+    layers.register_layer("symbols_pred", pred['symbols'])
+    layers.register_layer("stems_rests_pred", pred['stems_rests'])
+    layers.register_layer("notehead_pred", pred['note'])
+    layers.register_layer("clefs_keys_pred", pred['clefs_keys'])
     rr = range(1130, 1400)
-    #staffs, zones = extract()
-    #staffs = extract_part(pred[..., rr], 0)
-    lines, norm = extract_line(pred[..., rr], 0)
+    staffs, zones = extract()
+    staff_pred = pred['staff']
+    #staffs = extract_part(staff_pred[..., rr], 0)
+    lines, norm = extract_line(staff_pred[..., rr], 0)
 
-    data = pred[..., rr]
+    data = staff_pred[..., rr]
     count = np.zeros(len(data))
     ys, xs = np.where(data>0)
     for y in ys:
