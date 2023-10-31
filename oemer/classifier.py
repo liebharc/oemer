@@ -28,7 +28,7 @@ TARGET_WIDTH = 40
 TARGET_HEIGHT = 70
 DISTANCE = 10
 
-DATASET_PATH = "../ds2_dense/segmentation"
+DATASET_PATH = "./ds2_dense/segmentation"
 
 
 def _collect(colors, out_path, samples=100):
@@ -62,7 +62,32 @@ def _collect(colors, out_path, samples=100):
 
                 seed = random.randint(0, 1000)
                 np.float = float # Monkey patch to workaround removal of np.float
-                img = imaugs.perspective_transform(img, seed=seed, sigma=3)
+                aug_image = imaugs.perspective_transform(img, seed=seed, sigma=3)    # Blur
+                
+                rad = random.choice(np.arange(0.0001, 2.1, 0.5))
+                aug_image = imaugs.blur(aug_image, radius=rad)
+
+                # Pixel shuffle, kind of adding noise
+                factor = random.choice(np.arange(0.0001, 0.26, 0.05))
+                aug_image = imaugs.shuffle_pixels(aug_image, factor=factor)
+
+                # Image quality
+                qa = random.randint(0, 100)
+                aug_image = imaugs.encoding_quality(aug_image, quality=qa)
+
+                # Opacity
+                level = random.randint(6, 10) / 10
+                aug_image = imaugs.opacity(aug_image, level=level)
+                
+                # Pixelize (pretty similar to blur?)
+                rat = random.randint(3, 10) / 10
+                aug_image = imaugs.pixelization(aug_image, ratio=rat)
+
+                # Pixelize (pretty similar to blur?)
+                rat = random.randint(3, 10) / 10
+                aug_image = imaugs.pixelization(aug_image, ratio=rat)
+
+                img = aug_image
                 img = np.where(np.array(img)>0, 255, 0)
                 Image.fromarray(img.astype(np.uint8)).save(out_path / f"{idx}.png")
                 idx += 1
@@ -244,44 +269,44 @@ def predict(region, model_name):
     return m_info['class_map'][round(pred[0][0])]
 
 
-def train_rests_above8():
+def train_rests_above8(filename = "rests_above8.model"):
     folders = ["rest_8th", "rest_16th", "rest_32nd", "rest_64th"]
     model, class_map = train_tf([f"train_data/{folder}" for folder in folders])
     test_tf(model, [f"test_data/{folder}" for folder in folders])
     output = {'model': model, 'w': TARGET_WIDTH, 'h': TARGET_HEIGHT, 'class_map': class_map}
-    pickle.dump(output, open(f"rests_above8.model", "wb"))
+    pickle.dump(output, open(filename, "wb"))
 
 
-def train_rests():
+def train_rests(filename = "rests.model"):
     folders = ["rest_whole", "rest_quarter", "rest_8th"]
     model, class_map = train_tf([f"train_data/{folder}" for folder in folders])
     test_tf(model, [f"test_data/{folder}" for folder in folders])
     output = {'model': model, 'w': TARGET_WIDTH, 'h': TARGET_HEIGHT, 'class_map': class_map}
-    pickle.dump(output, open(f"rests.model", "wb"))
+    pickle.dump(output, open(filename, "wb"))
 
 
-def train_all_rests():
+def train_all_rests(filename = "all_rests.model"):
     folders = ["rest_whole", "rest_quarter", "rest_8th", "rest_16th", "rest_32nd", "rest_64th"]
     model, class_map = train_tf([f"train_data/{folder}" for folder in folders])
     test_tf(model, [f"test_data/{folder}" for folder in folders])
     output = {'model': model, 'w': TARGET_WIDTH, 'h': TARGET_HEIGHT, 'class_map': class_map}
-    pickle.dump(output, open(f"all_rests.model", "wb"))
+    pickle.dump(output, open(filename, "wb"))
 
 
-def train_sfn():
+def train_sfn(filename = "sfn.model"):
     folders = ["sharp", "flat", "natural"]
     model, class_map = train_tf([f"train_data/{folder}" for folder in folders])
     test_tf(model, [f"test_data/{folder}" for folder in folders])
     output = {'model': model, 'w': TARGET_WIDTH, 'h': TARGET_HEIGHT, 'class_map': class_map}
-    pickle.dump(output, open(f"sfn.model", "wb"))
+    pickle.dump(output, open(filename, "wb"))
 
 
-def train_clefs():
+def train_clefs(filename = "clef.model"):
     folders = ["gclef", "fclef"]
     model, class_map = train_tf([f"train_data/{folder}" for folder in folders])
     test_tf(model, [f"test_data/{folder}" for folder in folders])
     output = {'model': model, 'w': TARGET_WIDTH, 'h': TARGET_HEIGHT, 'class_map': class_map}
-    pickle.dump(output, open(f"clef.model", "wb"))
+    pickle.dump(output, open(filename, "wb"))
 
 
 def train_noteheads():

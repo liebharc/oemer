@@ -18,8 +18,11 @@ checkpoints/
 /*.pkl
 /*.jpeg
 /*.jpg
+/*.model
 
 ds2_dense
 ds2_dense.*
 CvcMuscima-Distortions
 CVCMUSCIMA_SR.*
+train_data
+test_data

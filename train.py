@@ -1,6 +1,9 @@
-from oemer import train
 import sys
 import time
+import os
+
+from oemer import train
+from oemer import classifier
 
 def write_text_to_file(text, path):
     with open(path, "w") as f:
@@ -16,6 +19,11 @@ def get_model_base_name(model_name: str) -> str:
                     
 model = sys.argv[1]
 
+def prepare_classifier_data():
+    if not os.path.exists("train_data"):
+        classifier.collect_data(1000)
+
+
 if model == "dense":
     model = train.train_model("ds2_dense", steps=500, epochs=1, win_size=128)
     filename = get_model_base_name("segnet")
@@ -26,6 +34,24 @@ elif model == "cvc":
     filename = get_model_base_name("unet")
     write_text_to_file(model.to_json(), filename + ".json")
     model.save_weights(filename + ".h5")
+elif model == "rests_above8":
+    prepare_classifier_data()
+    classifier.train_rests_above8(get_model_base_name(model) + ".model")
+elif model == "rests":
+    prepare_classifier_data()
+    classifier.train_rests(get_model_base_name(model) + ".model")
+elif model == "all_rests":
+    prepare_classifier_data()
+    classifier.train_all_rests(get_model_base_name(model) + ".model")
+elif model == "sfn":
+    prepare_classifier_data()
+    classifier.train_sfn(get_model_base_name(model) + ".model")
+elif model == "clef":
+    prepare_classifier_data()
+    classifier.train_clefs()
+elif model == "notehead":
+    prepare_classifier_data()
+    classifier.train_noteheads(get_model_base_name(model) + ".model")
 else:
     print("Unknown model: " + model)
     sys.exit(1)
