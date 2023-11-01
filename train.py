@@ -21,7 +21,7 @@ model = sys.argv[1]
 
 def prepare_classifier_data():
     if not os.path.exists("train_data"):
-        classifier.collect_data(1000)
+        classifier.collect_data(10000)
 
 
 if model == "dense":
@@ -48,7 +48,7 @@ elif model == "sfn":
     classifier.train_sfn(get_model_base_name(model) + ".model")
 elif model == "clef":
     prepare_classifier_data()
-    classifier.train_clefs()
+    classifier.train_clefs(get_model_base_name(model) + ".model")
 elif model == "notehead":
     prepare_classifier_data()
     classifier.train_noteheads(get_model_base_name(model) + ".model")

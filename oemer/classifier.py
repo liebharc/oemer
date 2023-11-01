@@ -198,7 +198,7 @@ def train_tf(folders):
         tf.keras.layers.Dense(len(folders), activation='softmax')
     ])
     model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-    model.fit(dataset, batch_size=16, epochs=10)
+    model.fit(dataset, batch_size=16, epochs=5)
     return model, class_map
 
 
