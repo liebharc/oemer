@@ -469,7 +469,7 @@ def extract_line(pred: ndarray, x_offset: int, line_threshold: float = 0.8) -> T
     return lines, norm  # type: ignore
 
 
-def filter_line_peaks(peaks: ndarray, norm: ndarray, max_gap_ratio: float = 1.5) -> Tuple[ndarray, List[int]]:
+def filter_line_peaks(peaks: ndarray, norm: ndarray, max_gap_ratio: float = 2) -> Tuple[ndarray, List[int]]:
     valid_peaks = np.array([True for _ in range(len(peaks))])
 
     # Filter by height
