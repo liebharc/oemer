@@ -7,6 +7,7 @@ from PIL import Image
 
 import augly.image as imaugs
 import numpy as np
+import cv2
 from sklearn import svm
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier, GradientBoostingClassifier, BaggingClassifier
@@ -38,7 +39,6 @@ def _collect(colors, out_path, samples=100):
         shutil.rmtree(out_path)
     out_path.mkdir(parents=True)
     idx = 0
-    add_space = 10
     for color in colors:
         cur_samples = 0
         while cur_samples < samples / len(colors):
@@ -54,6 +54,7 @@ def _collect(colors, out_path, samples=100):
                 if idx >= samples:
                     break
                 print(f"{idx+1}/{samples}", end='\r')
+                add_space = random.randint(0, 5)
                 patch = arr[box[1]-add_space:box[3]+add_space, box[0]-add_space:box[2]+add_space]
                 ratio = random.choice(np.arange(0.6, 1.3, 0.1))
                 tar_w = int(ratio * patch.shape[1])
@@ -65,29 +66,29 @@ def _collect(colors, out_path, samples=100):
                 aug_image = imaugs.perspective_transform(img, seed=seed, sigma=3)    # Blur
                 
                 rad = random.choice(np.arange(0.0001, 2.1, 0.5))
-                aug_image = imaugs.blur(aug_image, radius=rad)
+                #aug_image = imaugs.blur(aug_image, radius=rad)
 
                 # Pixel shuffle, kind of adding noise
                 factor = random.choice(np.arange(0.0001, 0.26, 0.05))
-                aug_image = imaugs.shuffle_pixels(aug_image, factor=factor)
+                #aug_image = imaugs.shuffle_pixels(aug_image, factor=factor)
 
                 # Image quality
-                qa = random.randint(0, 100)
+                qa = random.randint(98, 100)
                 aug_image = imaugs.encoding_quality(aug_image, quality=qa)
 
                 # Opacity
                 level = random.randint(6, 10) / 10
-                aug_image = imaugs.opacity(aug_image, level=level)
+                #aug_image = imaugs.opacity(aug_image, level=level)
                 
                 # Pixelize (pretty similar to blur?)
                 rat = random.randint(3, 10) / 10
-                aug_image = imaugs.pixelization(aug_image, ratio=rat)
+                #aug_image = imaugs.pixelization(aug_image, ratio=rat)
 
                 # Pixelize (pretty similar to blur?)
-                rat = random.randint(3, 10) / 10
-                aug_image = imaugs.pixelization(aug_image, ratio=rat)
+                rat = random.randint(2, 4) / 10
+                #aug_image = imaugs.pixelization(aug_image, ratio=rat)
 
-                img = aug_image
+                img =  cv2.cvtColor(np.array(aug_image), cv2.COLOR_RGB2GRAY)
                 img = np.where(np.array(img)>0, 255, 0)
                 Image.fromarray(img.astype(np.uint8)).save(out_path / f"{idx}.png")
                 idx += 1
