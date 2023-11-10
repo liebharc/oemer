@@ -21,7 +21,7 @@ model = sys.argv[1]
 
 def prepare_classifier_data():
     if not os.path.exists("train_data"):
-        classifier.collect_data(10000)
+        classifier.collect_data(2000)
 
 
 if model == "dense":

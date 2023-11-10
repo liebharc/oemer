@@ -378,6 +378,9 @@ def get_nearby_note_id(box: BBox, note_id_map: ndarray) -> Union[int, None]:
     unit_size = int(round(get_unit_size(cen_x, cen_y)))
     nid = None
     for x in range(box[2], box[2]+unit_size):
+        is_in_range = (0 <= cen_y < note_id_map.shape[0]) and (0 <= x < note_id_map.shape[1])
+        if not is_in_range:
+            continue
         if note_id_map[cen_y, x] != -1:
             nid = note_id_map[cen_y, x]
             break

@@ -74,7 +74,7 @@ def _collect(colors, out_path, samples=100):
 
                 # Image quality
                 qa = random.randint(98, 100)
-                aug_image = imaugs.encoding_quality(aug_image, quality=qa)
+                #aug_image = imaugs.encoding_quality(aug_image, quality=qa)
 
                 # Opacity
                 level = random.randint(6, 10) / 10
@@ -88,7 +88,7 @@ def _collect(colors, out_path, samples=100):
                 rat = random.randint(2, 4) / 10
                 #aug_image = imaugs.pixelization(aug_image, ratio=rat)
 
-                img =  cv2.cvtColor(np.array(aug_image), cv2.COLOR_RGB2GRAY)
+                #img =  cv2.cvtColor(np.array(aug_image), cv2.COLOR_RGB2GRAY)
                 img = np.where(np.array(img)>0, 255, 0)
                 Image.fromarray(img.astype(np.uint8)).save(out_path / f"{idx}.png")
                 idx += 1
@@ -100,9 +100,9 @@ def _collect(colors, out_path, samples=100):
 def collect_data(samples=400):
     # the color is the gray scale value of the pixels in the segmentation image
     color_map = {
-        "sharp": [74],
-        "flat": [70],
-        "natural": [72],
+        "sharp": [74, 80],
+        "flat": [70, 78],
+        "natural": [72, 79],
         'rest_whole': [97],
         'rest_half': [98],
         'rest_quarter': [99],
@@ -183,17 +183,17 @@ def train_tf(folders):
 
     model = tf.keras.models.Sequential([
         tf.keras.layers.InputLayer(input_shape=(TARGET_HEIGHT, TARGET_WIDTH, 1)),
-        tf.keras.layers.Conv2D(48, (7, 7), activation='relu'), # 48, (7, 7)
+        tf.keras.layers.Conv2D(32, (3, 3), activation='relu'), # 48, (7, 7)
         tf.keras.layers.BatchNormalization(),
         tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.Conv2D(32, (5, 5), activation='relu'), # 32, (5, 5)
+        tf.keras.layers.Conv2D(32, (3, 3), activation='relu'), # 32, (5, 5)
         tf.keras.layers.BatchNormalization(),
         tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.Conv2D(24, (3, 3), activation='relu'), # 18, (3, 53)
+        tf.keras.layers.Conv2D(32, (3, 3), activation='relu'), # 18, (3, 53)
         tf.keras.layers.BatchNormalization(),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Flatten(),
-        tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.Dense(128, activation='relu'),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(len(folders), activation='softmax')
     ])
