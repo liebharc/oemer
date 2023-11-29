@@ -3,13 +3,26 @@
 #   2: ledgerline
 #   3: barline between
 #   4: barline end
+#   7: Repeat dots
 #  10: g-glef
 #  11: c-clef
 #  12: c-clef again
 #  13: f-clef
 #  19: numbers - ignore
+#  20: numbers - ignore
+#  21: time-signature
+#  22: time-signature
+#  23: time-signature
 #  24: time-signature 3
+#  25: time-signature
+#  26: time-signature
+#  27: time-signature
 #  28: time-signature 7
+#  29: time-signature
+#  30: time-signature
+#  31: time-signature
+#  32: time-signature
+#  33: time-signature
 #  34: time-signature cut time
 #  35: notehead full on line
 #  36: Unknown
@@ -110,14 +123,12 @@
 # 171: unknown
 
 CLASS_CHANNEL_LIST = [
-    [165, 2],  # staff, ledgerLine
-    [35, 37, 38, 39, 41, 42, 43, 45, 46, 47, 49, 52],  # notehead, stem
+    [165],  # staff
+    [35, 37, 39, 41, 43, 45, 46, 47, 49],  # notehead
     [
-        64, 58, 60, 66, 63, 69, 68, 61, 62, 67, 65, 59, 146,  # flags, beam
-        97, 100, 99, 98, 101, 102, 103, 104, 96, 163,  # rests
-        80, 78, 79, 74, 70, 72, 76, 3,  # sharp, flat, natural, barline
-        10, 13, 12, 19, 11, 20, 51, # clefs, augmentationDot, 
-        25, 24, 29, 22, 23, 28, 27, 34, 30, 21, 33, 26,  # timeSigs
+        3, 4, 7, # bar lines
+        10, 11, 12, 13, # clefs, augmentationDot, 
+        #25, 24, 29, 22, 23, 28, 27, 34, 30, 21, 33, 26,  # timeSigs
     ]
 ]
 

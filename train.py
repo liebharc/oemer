@@ -24,13 +24,13 @@ def prepare_classifier_data():
         classifier.collect_data(2000)
 
 
-if model == "dense":
-    model = train.train_model("ds2_dense", steps=500, epochs=1, win_size=128)
+if model == "segnet":
+    model = train.train_model("ds2_dense", data_model="dense", epochs=5, early_stop=3)
     filename = get_model_base_name("segnet")
     write_text_to_file(model.to_json(), filename + ".json")
     model.save_weights(filename + ".h5")
-elif model == "cvc":
-    model = train.train_model("CvcMuscima-Distortions", steps=500, epochs=5, win_size=128, data_model="cvc")
+elif model == "unet":
+    model = train.train_model("CvcMuscima-Distortions", data_model="cvc", epochs=5, early_stop=3)
     filename = get_model_base_name("unet")
     write_text_to_file(model.to_json(), filename + ".json")
     model.save_weights(filename + ".h5")

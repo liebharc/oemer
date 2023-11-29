@@ -1,5 +1,6 @@
 import random
 import os
+import datetime
 from PIL import Image, ImageColor
 from multiprocessing import Process, Queue
 
@@ -9,7 +10,7 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 import augly.image as imaugs
 
-from .build_label import build_label
+from .build_label import build_label, close_lines
 from .models.unet import semantic_segmentation, u_net
 from .constant_min import CHANNEL_NUM
 from .dewarp import warp_randomly
@@ -129,8 +130,71 @@ def transform_perspective(img, seed: int):
     img = Image.fromarray(img)
     return img
 
-class DataLoader:
-    def __init__(self, feature_files, win_size=256, num_samples=100, min_step_size=0.2, num_worker=1):
+class MultiprocessingDataLoader:
+    def __init__(self, num_worker=1):
+        self._queue_max_size = 200
+        self._queue = Queue(maxsize=self._queue_max_size)
+        self._dist_queue_max_size = 30
+        self._dist_queue = Queue(maxsize=self._dist_queue_max_size)
+        self.num_worker = num_worker
+        self.last_queue_report = datetime.datetime.utcnow()
+
+
+    def report_queue_status(self):
+        if (datetime.datetime.utcnow() - self.last_queue_report).total_seconds() < 5 * 60:
+            return
+        self.last_queue_report = datetime.datetime.utcnow()
+        print(f"Queue size: {self._queue.qsize()}/{self._queue_max_size} | "
+              f"Distributed queue size: {self._dist_queue.qsize()}/{self._dist_queue_max_size}")
+
+    def initial_startup(self):
+        self.setup_process()
+        self.start_process()
+
+    def restart_processes_if_needed(self):
+        if not self.are_all_processes_alive():
+            print("Restarting processes...")
+            self.stop_process()
+            self.setup_process()
+            self.start_process()
+
+    def setup_process(self):
+        self._process_pool = []
+        for _ in range(self.num_worker):
+            processor = Process(target=self._preprocess_image)
+            processor.daemon = True
+            self._process_pool.append(processor)
+        self._pdist = Process(target=self._distribute_process)
+        self._pdist.daemon = True
+
+    def are_all_processes_alive(self):
+        if not self._pdist.is_alive():
+            return False
+        for process in self._process_pool:
+            if not process.is_alive():
+                return False
+        return True
+
+    def start_process(self):
+        self._pdist.start()
+        for process in self._process_pool:
+            process.start()
+
+    def stop_process(self):
+        self._pdist.terminate()
+        for process in self._process_pool:
+            process.terminate()
+    
+
+    def _distribute_process(self):
+        pass
+
+    def _preprocess_image(self):
+        pass
+
+class DataLoader(MultiprocessingDataLoader):
+    def __init__(self, feature_files, win_size=256, num_samples=100, min_step_size=0.2, num_worker=4):
+        super().__init__(num_worker)
         self.feature_files = feature_files
         random.shuffle(self.feature_files)
         self.win_size = win_size
@@ -144,15 +208,7 @@ class DataLoader:
 
         self.file_idx = 0
 
-        self._queue = Queue(maxsize=200)
-        self._dist_queue = Queue(maxsize=300)
-        self._process_pool = []
-        for _ in range(num_worker):
-            processor = Process(target=self._preprocess_image)
-            processor.daemon = True
-            self._process_pool.append(processor)
-        self._pdist = Process(target=self._distribute_process)
-        self._pdist.daemon = True
+        self.initial_startup()
 
     def _distribute_process(self):
         while True:
@@ -167,6 +223,7 @@ class DataLoader:
         while True:
             if not self._queue.full():
                 inp_img_path, staff_img_path, symbol_img_path = self._dist_queue.get()
+                self.report_queue_status()
 
                 # Preprocess image with transformations that won't change view.
                 image, _ = preprocess_image(inp_img_path)
@@ -176,7 +233,11 @@ class DataLoader:
                 tar_w = int(ratio * image.size[0])
                 tar_h = int(ratio * image.size[1])
                 image = imaugs.resize(image, width=tar_w, height=tar_h)
-                staff_img = imaugs.resize(staff_img_path, width=tar_w, height=tar_h)
+                staff_img_array = cv2.imread(staff_img_path)
+                staff_img_array = cv2.cvtColor(staff_img_array, cv2.COLOR_BGR2GRAY).astype(np.uint8)
+                staff_img_array = close_lines(staff_img_array)
+                staff_img = Image.fromarray(staff_img_array)
+                staff_img = imaugs.resize(staff_img, width=tar_w, height=tar_h)
                 symbol_img = imaugs.resize(symbol_img_path, width=tar_w, height=tar_h)
 
                 # Random perspective transform
@@ -192,11 +253,7 @@ class DataLoader:
     def __iter__(self):
         samples = 0
 
-        if not self._pdist.is_alive():
-            self._pdist.start()
-        for process in self._process_pool:
-            if not process.is_alive():
-                process.start()
+        self.restart_processes_if_needed()
 
         while samples < self.num_samples:
             image, staff_img, symbol_img, ratio = self._queue.get()
@@ -223,9 +280,7 @@ class DataLoader:
                 start_y = min(start_y + y_step, max_y)
                 start_x = min(start_x + x_step, max_x)
 
-        self._pdist.terminate()
-        for process in self._process_pool:
-            process.terminate()
+        self.stop_process()
 
     def get_dataset(self, batch_size, output_types=None, output_shapes=None):
         def gen_wrapper():
@@ -245,8 +300,9 @@ class DataLoader:
             .prefetch(tf.data.experimental.AUTOTUNE)
 
 
-class DsDataLoader:
-    def __init__(self, feature_files, win_size=256, num_samples=100, step_size=0.5, num_worker=1):
+class DsDataLoader(MultiprocessingDataLoader):
+    def __init__(self, feature_files, win_size=256, num_samples=100, step_size=0.5, num_worker=4):
+        super().__init__(num_worker)
         self.feature_files = feature_files
         random.shuffle(self.feature_files)
         self.win_size = win_size
@@ -259,16 +315,8 @@ class DsDataLoader:
             self.step_size = max(abs(step_size), 2)
 
         self.file_idx = 0
-
-        self._queue = Queue(maxsize=200)
-        self._dist_queue = Queue(maxsize=100)
-        self._process_pool = []
-        for _ in range(num_worker):
-            processor = Process(target=self._preprocess_image)
-            processor.daemon = True
-            self._process_pool.append(processor)
-        self._pdist = Process(target=self._distribute_process)
-        self._pdist.daemon = True
+        
+        self.initial_startup()
 
     def _distribute_process(self):
         while True:
@@ -283,6 +331,7 @@ class DsDataLoader:
         while True:
             if not self._queue.full():
                 inp_img_path, seg_img_path = self._dist_queue.get()
+                self.report_queue_status()
 
                 # Preprocess image with transformations that won't change view.
                 image, _ = preprocess_image(inp_img_path)
@@ -307,11 +356,7 @@ class DsDataLoader:
     def __iter__(self):
         samples = 0
 
-        if not self._pdist.is_alive():
-            self._pdist.start()
-        for process in self._process_pool:
-            if not process.is_alive():
-                process.start()
+        self.restart_processes_if_needed()
 
         while samples < self.num_samples:
             image, label, ratio = self._queue.get()
@@ -342,9 +387,7 @@ class DsDataLoader:
                 ll = label[index]
                 yield feat, ll
 
-        self._pdist.terminate()
-        for process in self._process_pool:
-            process.terminate()
+        self.stop_process()
 
     def get_dataset(self, batch_size, output_types=None, output_shapes=None):
         def gen_wrapper():
@@ -381,6 +424,7 @@ class WarmUpLearningRate(tf.keras.optimizers.schedules.LearningRateSchedule):
         self.warm_step_size = (init_lr - min_lr) / warm_up_steps
 
     def __call__(self, step):
+        step = tf.cast(step, dtype=tf.float32)
         warm_lr = self.min_lr + self.warm_step_size * step
 
         offset = step - self.warm_up_steps
@@ -390,7 +434,8 @@ class WarmUpLearningRate(tf.keras.optimizers.schedules.LearningRateSchedule):
         step_size = (start_lr - end_lr) / self.decay_step
         lr = start_lr - (offset - cycle * self.decay_step) * step_size
         true_lr = tf.where(offset > 0, lr, warm_lr)
-        return tf.maximum(true_lr, self.min_lr)
+        ret = tf.maximum(true_lr, self.min_lr)
+        return ret
 
     def get_config(self):
         return {
@@ -423,7 +468,8 @@ def train_model(
     val_steps=200,
     val_batch_size=8,
     early_stop=8,
-    data_model="dense"
+    data_model="dense",
+    initial_epoch=0
 ):
     if data_model == "dense":
         feat_files = get_deep_score_data_paths(dataset_path)
@@ -467,11 +513,16 @@ def train_model(
         model = semantic_segmentation(win_size=win_size, out_class=3)
 
     print("Initializing model")
-    #optim = tf.keras.optimizers.Adam(learning_rate=WarmUpLearningRate(learning_rate))
+    optim = tf.keras.optimizers.Adam(learning_rate=WarmUpLearningRate(learning_rate))
     #loss = tf.keras.losses.BinaryCrossentropy(label_smoothing=0.1)
     #loss = tf.keras.losses.CategoricalCrossentropy()
     loss = tfa.losses.SigmoidFocalCrossEntropy()
-    model.compile(optimizer="adam", loss=loss, metrics=['accuracy'])
+    if initial_epoch == 0:
+        model.compile(optimizer=optim, loss=loss, metrics=['accuracy'])
+    else:
+        with tf.keras.saving.custom_object_scope({'WarmUpLearningRate': WarmUpLearningRate(learning_rate)}):
+            model = tf.keras.models.load_model('seg_unet')
+
 
     callbacks = [
         tf.keras.callbacks.EarlyStopping(patience=early_stop, monitor='val_accuracy'),
@@ -479,15 +530,20 @@ def train_model(
     ]
 
     print("Start training")
-    model.fit(
-        train_data,
-        validation_data=val_data,
-        epochs=epochs,
-        steps_per_epoch=steps,
-        validation_steps=val_steps,
-        callbacks=callbacks
-    )
-    return model
+    try:
+        model.fit(
+            train_data,
+            validation_data=val_data,
+            epochs=epochs,
+            steps_per_epoch=steps,
+            validation_steps=val_steps,
+            callbacks=callbacks,
+            initial_epoch=initial_epoch 
+        )
+        return model
+    except Exception as e:
+        print(e)
+        return model
 
 
 def resize_image(image: Image.Image):
