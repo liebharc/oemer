@@ -1,13 +1,13 @@
+from oemer.dense_dataset_definitions import DENSE_DATASET_DEFINITIONS as DEF
+
 CLASS_CHANNEL_LIST = [
-    [165, 2],  # staff, ledgerLine
-    [35, 37, 38, 39, 41, 42, 43, 45, 46, 47, 49, 52],  # notehead, stem
-    [
-        64, 58, 60, 66, 63, 69, 68, 61, 62, 67, 65, 59, 146,  # flags, beam
-        97, 100, 99, 98, 101, 102, 103, 104, 96, 163,  # rests
-        80, 78, 79, 74, 70, 72, 76, 3,  # sharp, flat, natural, barline
-        10, 13, 12, 19, 11, 20, 51, # clefs, augmentationDot, 
-        25, 24, 29, 22, 23, 28, 27, 34, 30, 21, 33, 26,  # timeSigs
-    ]
+    DEF.STAFF + DEF.LEDGERLINE,
+    DEF.NOTEHEADS_ALL + DEF.STEM + [38, 42, 46],
+    (DEF.FLAG_UP + DEF.FLAG_DOWN + DEF.BEAM + [65, 59] # flags, beam
+     + DEF.ALL_RESTS_EXCEPT_LARGE + [163] # rests
+     + DEF.ALL_ACCIDENTALS + DEF.ALL_KEYS + DEF.BARLINE_BETWEEN
+     + DEF.ALL_CLEFS + DEF.NUMBERS + DEF.DOT 
+     + DEF.TIME_SIGNATURE_SUBSET),
 ]
 
 CLASS_CHANNEL_MAP = {
