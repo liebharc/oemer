@@ -125,8 +125,8 @@ def batch_transform(img, trans_func):
     
 class MultiprocessingDataLoader:
     def __init__(self, num_worker: int):
-        self._queue = Queue(maxsize=200)
-        self._dist_queue = Queue(maxsize=100)
+        self._queue = Queue(maxsize=20)
+        self._dist_queue = Queue(maxsize=30)
         self._process_pool = []
         for _ in range(num_worker):
             processor = Process(target=self._preprocess_image)
