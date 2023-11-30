@@ -58,6 +58,7 @@ def _collect(color, out_path, samples=100):
             img = imaugs.resize(Image.fromarray(patch.astype(np.uint8)), width=tar_w, height=tar_h)
 
             seed = random.randint(0, 1000)
+            np.float = float  # Monkey patch to workaround removal of np.float
             img = imaugs.perspective_transform(img, seed=seed, sigma=3)
             img = np.where(np.array(img)>0, 255, 0)
             Image.fromarray(img.astype(np.uint8)).save(out_path / f"{idx}.png")

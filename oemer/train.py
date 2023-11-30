@@ -11,7 +11,7 @@ import augly.image as imaugs
 
 from .build_label import build_label
 from .models.unet import semantic_segmentation, u_net
-from .constant import CHANNEL_NUM
+from .constant_min import CHANNEL_NUM
 
 
 
@@ -204,6 +204,7 @@ class DataLoader(MultiprocessingDataLoader):
 
                 # Random perspective transform
                 seed = random.randint(0, 1000)
+                np.float = float  # Monkey patch to workaround removal of np.float
                 perspect_trans = lambda img: imaugs.perspective_transform(img, seed=seed, sigma=70)
                 image = np.array(perspect_trans(image))  # RGB image
                 staff_img = np.array(perspect_trans(staff_img))  # 1-bit mask
@@ -307,6 +308,7 @@ class DsDataLoader(MultiprocessingDataLoader):
 
                 # Random perspective transform
                 seed = random.randint(0, 1000)
+                np.float = float  # Monkey patch to workaround removal of np.float
                 perspect_trans = lambda img: imaugs.perspective_transform(img, seed=seed, sigma=70)
                 image = np.array(batch_transform(image, perspect_trans))  # RGB image
                 label = np.array(batch_transform(label, perspect_trans))
@@ -465,11 +467,9 @@ def train_model(
                 num_samples=epochs*val_steps*val_batch_size
             ) \
             .get_dataset(val_batch_size)
+        model = u_net(win_size=win_size, out_class=3)
 
     print("Initializing model")
-    #model = naive_conv(win_size=win_size)
-    #model = u_net(win_size=win_size, out_class=CHANNEL_NUM)
-    model = semantic_segmentation(win_size=win_size, out_class=CHANNEL_NUM)
     optim = tf.keras.optimizers.Adam(learning_rate=WarmUpLearningRate(learning_rate))
     #loss = tf.keras.losses.BinaryCrossentropy(label_smoothing=0.1)
     #loss = tf.keras.losses.CategoricalCrossentropy()
