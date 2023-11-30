@@ -16,6 +16,9 @@ from .constant import CHANNEL_NUM
 
 
 def get_cvc_data_paths(dataset_path):
+    if not os.path.exists(dataset_path):
+        raise FileNotFoundError(f"{dataset_path} not found, download the dataset first.")
+    
     dirs = ["curvature", "ideal", "interrupted", "kanungo", "rotated", "staffline-thickness-variation-v1",
         "staffline-thickness-variation-v2", "staffline-y-variation-v1", "staffline-y-variation-v2",
         "thickness-ratio", "typeset-emulation", "whitespeckles"]
@@ -37,6 +40,9 @@ def get_cvc_data_paths(dataset_path):
 
 
 def get_deep_score_data_paths(dataset_path):
+    if not os.path.exists(dataset_path):
+        raise FileNotFoundError(f"{dataset_path} not found, download the dataset first.")
+    
     imgs = os.listdir(os.path.join(dataset_path, "images"))
     paths = []
     for img in imgs:
