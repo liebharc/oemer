@@ -356,26 +356,28 @@ def extract(
     assert all([len(staff) == len(all_staffs[0]) for staff in all_staffs])
 
     norm = lambda data: np.abs(np.array(data) / np.mean(data) - 1)
+    valid_staffs: list[Staff] = []
     for staffs in all_staffs.T:  # type: ignore
         # Should all have 5 lines
         line_num = [len(staff.lines) for staff in staffs]
         if len(set(line_num)) != 1:
-            raise E.StafflineCountInconsistent(
-                f"Some of the stafflines contains less or more than 5 lines: {line_num}")
+            print(f"Some of the stafflines contains less or more than 5 lines: {line_num}")
+            continue
 
         # Check Staffs that are approximately at the same row.
         centers = np.array([staff.y_center for staff in staffs])
         if not np.all(norm(centers) < horizontal_diff_th):
-            raise E.StafflineNotAligned(
-                f"Centers of staff parts at the same row not aligned (Th: {horizontal_diff_th}): {norm(centers)}")
+            print(f"Centers of staff parts at the same row not aligned (Th: {horizontal_diff_th}): {norm(centers)}")
+            continue
 
         # Unit sizes should roughly all the same
         unit_size = np.array([staff.unit_size for staff in staffs])
-        if not np.all(norm(unit_size) < unit_size_diff_th):
-            raise E.StafflineUnitSizeInconsistent(
-                f"Unit sizes not consistent (th: {unit_size_diff_th}): {norm(unit_size)}")
+        if not np.all(norm(unit_size) < unit_size_diff_th):          
+            print(f"Unit sizes not consistent (th: {unit_size_diff_th}): {norm(unit_size)}")
+            continue
+        valid_staffs.append(staffs)
 
-    return np.array(all_staffs), zones
+    return np.array(valid_staffs).T, zones
 
 
 def extract_part(pred: ndarray, x_offset: int, line_threshold: float = 0.8) -> List[Staff]:
