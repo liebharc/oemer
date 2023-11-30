@@ -438,7 +438,7 @@ def gen_rests(bboxes: List[BBox], labels: List[str]) -> List[Rest]:
         rr.group = st1.group
 
         unit_size = int(round(get_unit_size(*get_center(box))))
-        dot_range = range(box[2]+1, box[2]+unit_size)
+        dot_range = range(box[2]+1, min(box[2]+unit_size, symbols.shape[1] - 1))
         dot_region = symbols[box[1]:box[3], dot_range]
         if 0 < np.sum(dot_region) < unit_size**2 / 7:
             rr.has_dot = True
