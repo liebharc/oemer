@@ -7,9 +7,10 @@ import cv2
 import numpy as np
 
 from .constant_min import CLASS_CHANNEL_MAP
+from .dense_dataset_definitions import DENSE_DATASET_DEFINITIONS as DEF
 
 
-HALF_WHOLE_NOTE = [39, 41, 42, 43, 45, 46, 47, 49]
+HALF_WHOLE_NOTE = DEF.NOTEHEADS_HOLLOW + DEF.NOTEHEADS_WHOLE + [42]
 
 
 def fill_hole(gt, tar_color):
