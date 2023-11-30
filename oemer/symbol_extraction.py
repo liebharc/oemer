@@ -404,11 +404,14 @@ def gen_sfns(bboxes: List[BBox], labels: List[str]) -> List[Sfn]:
         if ss.note_id is not None:
             note = notes[ss.note_id]
             if ss.track != note.track:
-                raise E.SfnNoteTrackMismatch(f"Track of sfn and note not mismatch: {ss}\n{note}")
-            if ss.group != note.group:
-                raise E.SfnNoteGroupMismatch(f"Group of sfn and note not mismatch: {ss}\n{note}")
-            notes[ss.note_id].sfn = ss.label
-            ss.is_key = False
+                print(f"Track of sfn and note not mismatch: {ss}\n{note}") 
+                notes[ss.note_id].invalid = True
+            elif ss.group != note.group:
+                print(f"Group of sfn and note not mismatch: {ss}\n{note}")
+                notes[ss.note_id].invalid = True
+            else:
+                notes[ss.note_id].sfn = ss.label
+                ss.is_key = False
 
         sfns.append(ss)
     return sfns
