@@ -37,14 +37,18 @@ def scan_dot(
         # Find the right most bound for scan the dot.
         # Should have width less than unit_size, and can't
         # touch the nearby note.
-        cur_scan_line = note_id_map[int(start_y):int(bbox[3]), int(right_bound)]
-        ids = set(np.unique(cur_scan_line))
-        if -1 in ids:
-            ids.remove(-1)
-        if len(ids) > 0:
-            break
-        right_bound += 1
-        if right_bound >= bbox[2] + unit_size:
+        try:
+            cur_scan_line = note_id_map[int(start_y):int(bbox[3]), int(right_bound)]
+            ids = set(np.unique(cur_scan_line))
+            if -1 in ids:
+                ids.remove(-1)
+            if len(ids) > 0:
+                break
+            right_bound += 1
+            if right_bound >= bbox[2] + unit_size:
+                break
+        except IndexError as e:
+            print(e)
             break
 
     left_bound = bbox[2] + round(unit_size*0.4)
