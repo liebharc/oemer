@@ -1,3 +1,4 @@
+import sys
 import os
 import random
 from PIL import Image
@@ -101,12 +102,7 @@ def find_example(dataset_path: str, color: int, max_count=100, mark_value=200):
 
 
 if __name__ == "__main__":
-    seg_folder = '/media/kohara/ADATA HV620S/dataset/ds2_dense/segmentation'
-    files = os.listdir(seg_folder)
-    path = os.path.join(seg_folder, random.choice(files))
-    #out = build_label(path)
-
-    color = 45
-    arr = find_example(color)  # type: ignore
-    arr = np.where(arr==200, color, arr)
-    out = fill_hole(arr, color)
+    seg_folder = 'ds2_dense/segmentation'
+    color = int(sys.argv[1])
+    with_background, without_background = find_example(seg_folder, color)
+    cv2.imwrite("example.png", with_background)
