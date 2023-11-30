@@ -13,3 +13,15 @@ checkpoints/
 *.musicxml
 *.mp3
 *.swp
+
+# Model training datasets
+/ds2_dense
+/CvcMuscima-Distortions
+
+# Model training checkpoints and outputs
+/seg_unet
+/test_data
+/train_data
+/*.model
+/*.h5
+/*.json
