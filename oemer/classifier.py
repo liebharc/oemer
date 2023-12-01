@@ -253,6 +253,14 @@ def train_rests(filename = "rests.model"):
     pickle.dump(output, open(filename, "wb"))
 
 
+def train_all_rests(filename = "all_rests.model"):
+    folders = ["rest_whole", "rest_quarter", "rest_8th", "rest_16th", "rest_32nd", "rest_64th"]
+    model, class_map = train_tf([f"train_data/{folder}" for folder in folders])
+    test_tf(model, [f"test_data/{folder}" for folder in folders])
+    output = {'model': model, 'w': TARGET_WIDTH, 'h': TARGET_HEIGHT, 'class_map': class_map}
+    pickle.dump(output, open(filename, "wb"))
+
+
 def train_sfn(filename = "sfn.model"):
     folders = ["sharp", "flat", "natural"]
     model, class_map = train_tf([f"train_data/{folder}" for folder in folders])
