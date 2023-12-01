@@ -376,6 +376,7 @@ class WarmUpLearningRate(tf.keras.optimizers.schedules.LearningRateSchedule):
         self.warm_step_size = (init_lr - min_lr) / warm_up_steps
 
     def __call__(self, step):
+        step = tf.cast(step, tf.float32)
         warm_lr = self.min_lr + self.warm_step_size * step
 
         offset = step - self.warm_up_steps
