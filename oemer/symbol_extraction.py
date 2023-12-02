@@ -317,6 +317,8 @@ def parse_rests(line_box: ndarray, unit_size: float) -> Tuple[List[BBox], List[s
 
     bboxes = get_bbox(rests)
     bboxes = filter_out_of_range_bbox(bboxes)
+    if len(bboxes) == 0:
+        return [], []
     bboxes = merge_nearby_bbox(bboxes, unit_size*1.2)
     bboxes = rm_merge_overlap_bbox(bboxes)
     bboxes = filter_out_small_area(bboxes, area_size_func=lambda usize: usize**2 * 0.7)
