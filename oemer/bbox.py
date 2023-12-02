@@ -118,11 +118,12 @@ def find_lines(data: ndarray, min_len: int = 10, max_gap: int = 20) -> List[BBox
 
     lines = cv2.HoughLinesP(data.astype(np.uint8), 1, np.pi/180, 50, None, min_len, max_gap)
     new_line = []
-    for line in lines:
-        line = line[0]
-        top_x, bt_x = (line[0], line[2]) if line[0] < line[2] else (line[2], line[0])
-        top_y, bt_y = (line[1], line[3]) if line[1] < line[3] else (line[3], line[1])
-        new_line.append((top_x, top_y, bt_x, bt_y))
+    if lines is not None:
+        for line in lines:
+            line = line[0]
+            top_x, bt_x = (line[0], line[2]) if line[0] < line[2] else (line[2], line[0])
+            top_y, bt_y = (line[1], line[3]) if line[1] < line[3] else (line[3], line[1])
+            new_line.append((top_x, top_y, bt_x, bt_y))
     return new_line
 
 
