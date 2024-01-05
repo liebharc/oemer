@@ -32,7 +32,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff==0.0.285 mypy==1.7.1
+          pip install ruff mypy
 
       - name: List packages
         run: pip list
