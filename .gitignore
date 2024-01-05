@@ -25,3 +25,10 @@ checkpoints/
 /*.model
 /*.h5
 /*.json
+
+/segnet_*
+/unet_*
+/rests_*
+/all_rests_*
+/sfn_*
+/clef_*
