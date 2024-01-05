@@ -270,7 +270,7 @@ def parse_clefs_keys(
     for box in bboxes:
         w = box[2] - box[0]
         h = box[3] - box[1]
-        region = clefs_keys[box[1]:box[3], box[0]:box[2]]
+        region: ndarray = clefs_keys[box[1]:box[3], box[0]:box[2]]
         usize = get_unit_size(*get_center(box))
         area_size_ratio = w * h / usize**2
         area_tp_ratio = region[region>0].size / (w * h)

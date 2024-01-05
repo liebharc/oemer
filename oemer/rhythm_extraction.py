@@ -3,6 +3,7 @@ import random
 import math
 
 import cv2
+from cv2.typing import RotatedRect
 import scipy.ndimage
 import numpy as np
 from numpy import ndarray
@@ -139,7 +140,7 @@ def parse_beams(
         min_area_ratio: float = 0.07, 
         min_tp_ratio: float = 0.4, 
         min_width_ratio: float = 0.2
-) -> Tuple[ndarray, List[Tuple[Tuple[float, float], Tuple[float, float], float]], ndarray]:
+) -> Tuple[ndarray, List[RotatedRect], ndarray]:
     # Fetch parameters
     symbols = layers.get_layer('symbols_pred')
     staff_pred = layers.get_layer('staff_pred')
@@ -161,14 +162,14 @@ def parse_beams(
     ratio_map = np.copy(poly_map)
 
     null_color = (255, 255, 255)
-    valid_box = []
+    valid_box: List[RotatedRect] = []
     valid_idxs = []
     idx_map = np.zeros_like(poly_map) - 1
-    for idx, rbox in enumerate(rboxes):  # type: ignore
+    for box_idx, rbox in enumerate(rboxes):  # type: ignore
         # Used to find indexes of contour areas later. Must be check before
         # any 'continue' statement.
-        idx %= 255  # type: ignore
-        if idx == 0:
+        box_idx %= 255  # type: ignore
+        if box_idx == 0:
             idx_map = np.zeros_like(poly_map) - 1
 
         # Get the contour of the rotated box
@@ -191,8 +192,8 @@ def parse_beams(
             continue
 
         # Tricky way to get the index of the contour area
-        cv2.fillPoly(idx_map, [cnt], color=(idx, 0, 0))
-        yi, xi = np.where(idx_map[..., 0] == idx)
+        cv2.fillPoly(idx_map, [cnt], color=(box_idx, 0, 0))
+        yi, xi = np.where(idx_map[..., 0] == box_idx)
         pts = beams[yi, xi]
         meta_idx = np.where(pts>0)[0]
         ryi = yi[meta_idx]
@@ -615,7 +616,7 @@ def extract(
     dot_max_area_ratio: float = 0.2,
     beam_min_area_ratio: float = 0.07,
     agree_th: float = 0.15
-) -> Tuple[ndarray, List[Tuple[Tuple[float, float], Tuple[float, float], float]]]:
+) -> Tuple[ndarray, List[RotatedRect]]:
 
     logger.debug("Parsing dot")
     parse_dot(max_area_ratio=dot_max_area_ratio, min_area_ratio=dot_min_area_ratio)

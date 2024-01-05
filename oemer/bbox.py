@@ -2,6 +2,7 @@
 from typing import Union, Any, List, Tuple, Dict
 
 import cv2
+from cv2.typing import RotatedRect
 import numpy as np
 from numpy import ndarray
 from sklearn.cluster import AgglomerativeClustering
@@ -160,7 +161,7 @@ def draw_bounding_boxes(
     return img
 
 
-def get_rotated_bbox(data: ndarray) -> List[Tuple[Tuple[float, float], Tuple[float, float], float]]:
+def get_rotated_bbox(data: ndarray) -> List[RotatedRect]:
     contours, _ = cv2.findContours(data.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     bboxes = []
     for cnt in contours:
