@@ -82,7 +82,7 @@ def build_label(seg_path):
 
     output[..., 0] = np.where(arr==0, 1, 0)
     for color in color_set:
-        ch = CLASS_CHANNEL_MAP.get(color, -1)
+        ch = CLASS_CHANNEL_MAP.get(color, 0)
         if (ch != 0) and color in HALF_WHOLE_NOTE:
             note = fill_hole(arr, color)
             output[..., ch] += note

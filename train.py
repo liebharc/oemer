@@ -27,13 +27,13 @@ def prepare_classifier_data():
         classifier.collect_data(2000)
 
 if model_type == "segnet":
-    model = train.train_model("ds2_dense", data_model=model_type, steps=1500, epochs=3)
+    model = train.train_model("ds2_dense", data_model=model_type, steps=1500, epochs=15)
     filename = get_model_base_name(model_type)
     os.makedirs(filename)
     write_text_to_file(model.to_json(), os.path.join(filename, "arch.json"))
     model.save_weights(os.path.join(filename, "weights.h5"))
 elif model_type == "unet":
-    model = train.train_model("CvcMuscima-Distortions", data_model=model_type, steps=1500, epochs=3)
+    model = train.train_model("CvcMuscima-Distortions", data_model=model_type, steps=1500, epochs=15)
     filename = get_model_base_name(model_type)
     os.makedirs(filename)
     write_text_to_file(model.to_json(), os.path.join(filename, "arch.json"))
