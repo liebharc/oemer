@@ -71,7 +71,7 @@ def fill_hole(gt, tar_color):
     return tar
 
 
-def build_label(seg_path):
+def build_label(seg_path, strenghten_channels: dict[int, tuple[int, int]]=dict()):
     img = Image.open(seg_path)
     arr = np.array(img)
     color_set = set(np.unique(arr))
@@ -86,9 +86,50 @@ def build_label(seg_path):
         if (ch != 0) and color in HALF_WHOLE_NOTE:
             note = fill_hole(arr, color)
             output[..., ch] += note
-        else:
+        elif ch != 0:
             output[..., ch] += np.where(arr==color, 1, 0)
+    for ch in strenghten_channels.keys():
+            output[..., ch] = make_symbols_stronger(output[..., ch], strenghten_channels[ch])
+            # The background channel is 1 if all other channels are 0
+            background_ch = np.ones((arr.shape[0], arr.shape[1]))
+            for ch in range(1, total_chs):
+                background_ch = np.where(output[..., ch]==1, 0, background_ch)
+            output[..., 0] = background_ch            
     return output
+
+
+def close_lines(img: np.ndarray):
+    #img = close_morph(img)
+    # Use hough transform to find lines
+    width = img.shape[1]
+    lines = cv2.HoughLinesP(img, 1, np.pi/180, threshold=width//32, minLineLength=width//16, maxLineGap=50)
+    if lines is not None:
+        angles = []
+        # Draw lines
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            angle = np.arctan2(y2-y1, x2-x1)
+            angles.append(angle)
+        mean_angle = np.mean(angles)
+        # Draw lines
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            angle = np.arctan2(y2-y1, x2-x1)
+            is_horizontal = abs(angle - mean_angle) < np.pi/16
+            if is_horizontal:
+                cv2.line(img, (x1,y1), (x2,y2), 255, 1)
+    else:
+        print("No lines found")
+
+    return img        
+
+
+def make_symbols_stronger(img: np.ndarray, kernel_size=(5, 5)):
+    """
+    Dilates the symbols to make them stronger
+    """
+    kernel = np.ones(kernel_size, np.uint8)
+    return cv2.dilate(img, kernel, iterations=1)
 
 
 def find_example(dataset_path: str, color: int, max_count=100, mark_value=200):
