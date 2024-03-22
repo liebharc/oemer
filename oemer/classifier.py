@@ -1,6 +1,5 @@
 import random
 import pickle
-from os import remove
 from pathlib import Path
 from PIL import Image
 
@@ -14,6 +13,7 @@ from sklearn.model_selection import GridSearchCV
 
 from oemer.bbox import get_bbox, merge_nearby_bbox, draw_bounding_boxes, rm_merge_overlap_bbox
 from oemer.build_label import find_example
+from oemer.model_utils import load_model, save_model
 
 
 SVM_PARAM_GRID = {
@@ -135,16 +135,20 @@ def train_tf(folders):
         for ff in folder.iterdir():
             if samples is not None and idx >= samples:
                 break
-            img = Image.open(ff).resize((TARGET_WIDTH, TARGET_HEIGHT))
+            img = Image.open(ff).resize((TARGET_WIDTH, TARGET_HEIGHT)).convert('L')
             arr = np.array(img)
             train_x.append(arr)
             train_y.append(cidx)
             idx += 1
     train_x = np.array(train_x)[..., np.newaxis]
     train_y = tf.one_hot(train_y, len(folders))
-    output_types = (tf.uint8, tf.uint8)
-    output_shapes = ((TARGET_HEIGHT, TARGET_WIDTH, 1), (len(folders)))
-    dataset = tf.data.Dataset.from_generator(lambda: zip(train_x, train_y), output_types=output_types, output_shapes=output_shapes)
+    dataset = tf.data.Dataset.from_generator(
+        lambda: zip(train_x, train_y),
+        output_signature=(
+                    tf.TensorSpec(shape=(TARGET_HEIGHT, TARGET_WIDTH, 1), dtype=tf.uint8, name=None),
+                    tf.TensorSpec(shape=(len(folders)), dtype=tf.uint8, name=None)
+                )
+    )
     dataset = dataset.shuffle(len(train_y), reshuffle_each_iteration=True)
     dataset = dataset.repeat(5)
     dataset = dataset.batch(16)
@@ -183,13 +187,13 @@ def test(model, folders):
         for ff in files:
             if idx >= samples:
                 break
-            img = Image.open(ff).resize((TARGET_WIDTH, TARGET_HEIGHT))
+            img = Image.open(ff).resize((TARGET_WIDTH, TARGET_HEIGHT)).convert('L')
             arr = np.array(img).flatten()
             test_x.append(arr)
             test_y.append(cidx)
             idx += 1
 
-    pred_y = model.predict(test_x)
+    pred_y = model.serve(test_x)
     tp_idx = (pred_y == test_y)
     tp = len(pred_y[tp_idx])
     acc = tp / len(test_y)
@@ -205,7 +209,7 @@ def test_tf(model, folders):
         files = list(folder.iterdir())
         random.shuffle(files)
         for ff in files:
-            img = Image.open(ff).resize((TARGET_WIDTH, TARGET_HEIGHT))
+            img = Image.open(ff).resize((TARGET_WIDTH, TARGET_HEIGHT)).convert('L')
             arr = np.array(img)
             test_x.append(arr)
             test_y.append(cidx)
@@ -229,61 +233,76 @@ def test_tf(model, folders):
 def predict(region, model_name):
     if np.max(region) == 1:
         region *= 255
-    m_info = pickle.load(open(f"sklearn_models/{model_name}.model", "rb"))
-    model = m_info['model']
-    w = m_info['w']
-    h = m_info['h']
-    region = Image.fromarray(region.astype(np.uint8)).resize((w, h))
-    pred = model.predict(np.array(region).reshape(1, -1))
-    return m_info['class_map'][pred[0]]
+    model, metadata = load_model(f"sklearn_models/{model_name}")
+    w = metadata['w']
+    h = metadata['h']
+    region = np.array(Image.fromarray(region.astype(np.uint8)).resize((w, h)))
+    pred = model.predict(region.reshape(1, -1))
+    return metadata['class_map'][pred[0]]
 
-def train_rests_above8(filename = "rests_above8.model"):
+def train_rests_above8(filename = "rests_above8"):
     folders = ["rest_8th", "rest_16th", "rest_32nd", "rest_64th"]
     model, class_map = train_tf([f"train_data/{folder}" for folder in folders])
     test_tf(model, [f"test_data/{folder}" for folder in folders])
-    output = {'model': model, 'w': TARGET_WIDTH, 'h': TARGET_HEIGHT, 'class_map': class_map}
-    pickle.dump(output, open(filename, "wb"))
+    meta = {
+        "w": TARGET_WIDTH,
+        "h": TARGET_HEIGHT,
+        "class_map": class_map
+    }
+    save_model(model, meta, filename)
+    print("Model saved to", filename)
 
 
-def train_rests(filename = "rests.model"):
+def train_rests(filename = "rests"):
     folders = ["rest_whole", "rest_quarter", "rest_8th"]
     model, class_map = train_tf([f"train_data/{folder}" for folder in folders])
     test_tf(model, [f"test_data/{folder}" for folder in folders])
-    output = {'model': model, 'w': TARGET_WIDTH, 'h': TARGET_HEIGHT, 'class_map': class_map}
-    pickle.dump(output, open(filename, "wb"))
+    meta = {
+        "w": TARGET_WIDTH,
+        "h": TARGET_HEIGHT,
+        "class_map": class_map
+    }
+    save_model(model, meta, filename)
+    print("Model saved to", filename)
 
 
-def train_all_rests(filename = "all_rests.model"):
+def train_all_rests(filename = "all_rests"):
     folders = ["rest_whole", "rest_quarter", "rest_8th", "rest_16th", "rest_32nd", "rest_64th"]
     model, class_map = train_tf([f"train_data/{folder}" for folder in folders])
     test_tf(model, [f"test_data/{folder}" for folder in folders])
-    output = {'model': model, 'w': TARGET_WIDTH, 'h': TARGET_HEIGHT, 'class_map': class_map}
-    pickle.dump(output, open(filename, "wb"))
+    meta = {
+        "w": TARGET_WIDTH,
+        "h": TARGET_HEIGHT,
+        "class_map": class_map
+    }
+    save_model(model, meta, filename)
+    print("Model saved to", filename)
 
 
-def train_sfn(filename = "sfn.model"):
+def train_sfn(filename = "sfn"):
     folders = ["sharp", "flat", "natural"]
     model, class_map = train_tf([f"train_data/{folder}" for folder in folders])
     test_tf(model, [f"test_data/{folder}" for folder in folders])
-    output = {'model': model, 'w': TARGET_WIDTH, 'h': TARGET_HEIGHT, 'class_map': class_map}
-    pickle.dump(output, open(filename, "wb"))
+    meta = {
+        "w": TARGET_WIDTH,
+        "h": TARGET_HEIGHT,
+        "class_map": class_map
+    }
+    save_model(model, meta, filename)
+    print("Model saved to", filename)
 
 
-def train_clefs(filename = "clef.model"):
+def train_clefs(filename = "clef"):
     folders = ["gclef", "fclef"]
     model, class_map = train_tf([f"train_data/{folder}" for folder in folders])
     test_tf(model, [f"test_data/{folder}" for folder in folders])
-    output = {'model': model, 'w': TARGET_WIDTH, 'h': TARGET_HEIGHT, 'class_map': class_map}
-    pickle.dump(output, open(filename, "wb"))
-
-
-def train_noteheads():
-    folders = ["notehead_solid", "notehead_hollow"]
-    model, class_map = train_tf([f"train_data/{folder}" for folder in folders])
-    test_tf(model, [f"test_data/{folder}" for folder in folders])
-    output = {'model': model, 'w': TARGET_WIDTH, 'h': TARGET_HEIGHT, 'class_map': class_map}
-    pickle.dump(output, open(f"notehead.model", "wb"))
-    
+    meta = {
+        "w": TARGET_WIDTH,
+        "h": TARGET_HEIGHT,
+        "class_map": class_map
+    }
+    save_model(model, meta, filename)
+    print("Model saved to", filename)
 
 if __name__ == "__main__":
     samples = 400

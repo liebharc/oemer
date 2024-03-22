@@ -6,7 +6,6 @@ from multiprocessing import Process, Queue
 import cv2
 import numpy as np
 import tensorflow as tf
-import tensorflow_addons as tfa
 import augly.image as imaugs
 
 from .build_label import build_label, close_lines
@@ -251,19 +250,16 @@ class DataLoader(MultiprocessingDataLoader):
 
         self._terminate_processes()
 
-    def get_dataset(self, batch_size, output_types=None, output_shapes=None):
+    def get_dataset(self, batch_size):
         def gen_wrapper():
             for data in self:
                 yield data
 
-        if output_types is None:
-            output_types = (tf.uint8, tf.float32)
-
-        if output_shapes is None:
-            output_shapes = ((self.win_size, self.win_size, 3), (self.win_size, self.win_size, 3))
-
         return tf.data.Dataset.from_generator(
-                gen_wrapper, output_types=output_types, output_shapes=output_shapes
+                gen_wrapper, output_signature=(
+                    tf.TensorSpec(shape=(self.win_size, self.win_size, 3), dtype=tf.uint8, name=None),
+                    tf.TensorSpec(shape=(self.win_size, self.win_size, 3), dtype=tf.float32, name=None)
+                )
             ) \
             .batch(batch_size, drop_remainder=True) \
             .prefetch(tf.data.experimental.AUTOTUNE)
@@ -358,19 +354,17 @@ class DsDataLoader(MultiprocessingDataLoader):
                 yield feat, ll
 
         self._terminate_processes()
-    def get_dataset(self, batch_size, output_types=None, output_shapes=None):
+    def get_dataset(self, batch_size):
         def gen_wrapper():
             for data in self:
                 yield data
 
-        if output_types is None:
-            output_types = (tf.uint8, tf.float32)
-
-        if output_shapes is None:
-            output_shapes = ((self.win_size, self.win_size, 3), (self.win_size, self.win_size, CHANNEL_NUM))
-
         return tf.data.Dataset.from_generator(
-                gen_wrapper, output_types=output_types, output_shapes=output_shapes
+                gen_wrapper,
+                output_signature=(
+                    tf.TensorSpec(shape=(self.win_size, self.win_size, 3), dtype=tf.uint8, name=None),
+                    tf.TensorSpec(shape=(self.win_size, self.win_size, CHANNEL_NUM), dtype=tf.float32, name=None)
+                )
             ) \
             .batch(batch_size, drop_remainder=True) \
             .prefetch(tf.data.experimental.AUTOTUNE)
@@ -412,17 +406,6 @@ class WarmUpLearningRate(tf.keras.optimizers.schedules.LearningRateSchedule):
             "decay_rate": self.decay_rate,
             "min_lr": self.min_lr
         }
-
-
-def focal_tversky_loss(y_true, y_pred, fw=0.7, alpha=0.7, smooth=1., gamma=0.75):
-    tp_weight = 0.4  # Reduce the influence of true positive samples (mostly background).
-    tp = tf.reduce_sum(y_true * y_pred) * tp_weight
-    fn = tf.reduce_sum(y_true * (1-y_pred))
-    fp = tf.reduce_sum((1-y_true) * y_pred)
-    tversky = 1 - (tp + smooth) / (tp + alpha*fn + (1-alpha)*fp + smooth)
-    t_loss = tf.pow(tversky, gamma)
-    focal_loss = tfa.losses.sigmoid_focal_crossentropy(y_true, y_pred)
-    return fw*focal_loss + (1-fw)*t_loss
 
 
 def train_model(
@@ -482,12 +465,13 @@ def train_model(
     optim = tf.keras.optimizers.Adam(learning_rate=WarmUpLearningRate(learning_rate))
     #loss = tf.keras.losses.BinaryCrossentropy(label_smoothing=0.1)
     #loss = tf.keras.losses.CategoricalCrossentropy()
-    loss = tfa.losses.SigmoidFocalCrossEntropy()
+    loss = tf.keras.losses.CategoricalCrossentropy()
+    #tfa.losses.SigmoidFocalCrossEntropy()
     model.compile(optimizer=optim, loss=loss, metrics=['accuracy'])
 
     callbacks = [
         tf.keras.callbacks.EarlyStopping(patience=early_stop, monitor='val_accuracy'),
-        tf.keras.callbacks.ModelCheckpoint("seg_unet", save_weights_only=False, monitor='val_accuracy')
+        tf.keras.callbacks.ModelCheckpoint("seg_unet.keras", save_weights_only=False, monitor='val_accuracy')
     ]
 
     print("Start training")

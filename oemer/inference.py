@@ -8,6 +8,7 @@ import numpy as np
 from numpy import ndarray
 
 from oemer import MODULE_PATH
+from oemer.model_utils import load_model
 
 
 def resize_image(image: Image.Image):
@@ -35,14 +36,9 @@ def inference(
     use_tf: bool = False
 ) -> Tuple[ndarray, ndarray]:
     if use_tf:
-        import tensorflow as tf
-
-        arch_path = os.path.join(model_path, "arch.json")
-        w_path = os.path.join(model_path, "weights.h5")
-        model = tf.keras.models.model_from_json(open(arch_path, "r").read())
-        model.load_weights(w_path)
-        input_shape = model.input_shape
-        output_shape = model.output_shape
+        model, metadata = load_model(model_path)
+        input_shape = metadata["input_shape"]
+        output_shape = metadata["output_shape"]
     else:
         import onnxruntime as rt
 
@@ -79,7 +75,7 @@ def inference(
     for idx in range(0, len(data), batch_size):
         print(f"{idx+1}/{len(data)} (step: {batch_size})", end="\r")
         batch = np.array(data[idx:idx+batch_size])
-        out = model.predict(batch) if use_tf else sess.run(output_names, {'input': batch})[0]
+        out = model.serve(batch) if use_tf else sess.run(output_names, {'input': batch})[0]
         pred.append(out)
 
     # Merge prediction patches
@@ -115,13 +111,12 @@ def inference(
 def predict(region: ndarray, model_name: str) -> str:
     if np.max(region) == 1:
         region *= 255
-    m_info = pickle.load(open(os.path.join(MODULE_PATH, f"sklearn_models/{model_name}.model"), "rb"))
-    model = m_info['model']
-    w = m_info['w']
-    h = m_info['h']
+    model, metadata = load_model(os.path.join(MODULE_PATH, f"sklearn_models/{model_name}"))
+    w = metadata['w']
+    h = metadata['h']
     region = np.array(Image.fromarray(region.astype(np.uint8)).resize((w, h)))
-    pred = model.predict(region.reshape(1, -1))
-    return m_info['class_map'][pred[0]]
+    pred = model.serve(region.reshape(1, -1))
+    return metadata['class_map'][pred[0]]
 
 
 if __name__ == "__main__":
