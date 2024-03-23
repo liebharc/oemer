@@ -465,7 +465,8 @@ def train_model(
     optim = tf.keras.optimizers.Adam(learning_rate=WarmUpLearningRate(learning_rate))
     #loss = tf.keras.losses.BinaryCrossentropy(label_smoothing=0.1)
     #loss = tf.keras.losses.CategoricalCrossentropy()
-    loss = tf.keras.losses.CategoricalCrossentropy()
+    #loss = tf.keras.losses.CategoricalCrossentropy()
+    loss = tf.keras.losses.CategoricalFocalCrossentropy()
     #tfa.losses.SigmoidFocalCrossEntropy()
     model.compile(optimizer=optim, loss=loss, metrics=['accuracy'])
 
